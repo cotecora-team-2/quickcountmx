@@ -1,0 +1,16 @@
+Package: quickcountmx
+Title: Quick-count estimation package for the 2021 Mexican election
+Version: 0.0.0.9000
+Authors@R:
+    c(person("Teresa", "Ortiz", email = "teresa.ortiz.mancera@gmail.com", role = c("aut", "cre")), 
+      person("Felipe", "Gonzalez", email = "felipexgonzalez@gmail.com", role = c("aut")))
+Description: Functions to simulate and estimate Mexican election results based on a simple or stratified random sample, the functions were used, among other methodologies, to anticipate the final results of the 2021 Mexican elections.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Suggests: 
+    testthat
+Imports: 
+    dplyr
