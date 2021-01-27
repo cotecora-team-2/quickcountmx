@@ -3,6 +3,7 @@
 \name{select_sample}
 \alias{select_sample}
 \alias{select_sample_prop}
+\alias{select_sample_str}
 \title{Select simple and stratified random samples from a sampling frame.}
 \usage{
 select_sample_prop(
@@ -12,10 +13,22 @@ select_sample_prop(
   seed = NA,
   replace = FALSE
 )
+
+select_sample_str(
+  sampling_frame,
+  allocation,
+  sample_size = sample_size,
+  stratum = stratum,
+  is_frac = FALSE,
+  seed = NA,
+  replace = FALSE
+)
 }
 \arguments{
 \item{sampling_frame}{\code{tibble} with the sampling frame it must contain a
-column with the stratum.}
+column with the stratum.
+@param allocation \code{data.frame} with a column defining the strata and a
+column with sample size allocations for each stratum (one line per stratum).}
 
 \item{stratum}{unquoted column with strata in the allocation and
 sampling_frame \code{tibble}'s (the columns must have the same name in the
@@ -29,6 +42,9 @@ numeric value indicating the fraction of the data to select.}
 
 \item{replace}{logical value indicating whether the sample should be selected
 with replacement.}
+
+\item{sample_size}{unquoted column with sample sizes in the allocation
+data.frame}
 }
 \value{
 A \code{tibble} with the selected sample, it will have the same
