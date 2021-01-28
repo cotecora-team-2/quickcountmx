@@ -5,11 +5,7 @@
 \alias{conteo_2018}
 \title{Computos distritales for 2018 electino}
 \format{
-A data frame with 156840 rows and 95 variables:
-\describe{
-\item{CLAVE_CASILLA - JAMK}{computos distritales 2018}
-\item{TVIVPARHAB-VPH_SNBIEN}{2010 INEGI census data}
-}
+An object of class \code{spec_tbl_df} (inherits from \code{tbl_df}, \code{tbl}, \code{data.frame}) with 156840 rows and 95 columns.
 }
 \source{
 \url{https://computos2018.ine.mx/#/presidencia/nacional/1/1/1/1}
