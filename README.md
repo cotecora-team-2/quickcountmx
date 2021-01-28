@@ -5,6 +5,8 @@
 
 <!-- badges: start -->
 
+[![R build
+status](https://github.com/cotecora-team-2/quickcountmx/workflows/R-CMD-check/badge.svg)](https://github.com/cotecora-team-2/quickcountmx/actions)
 <!-- badges: end -->
 
 Functions to simulate and estimate Mexican election results based on a
