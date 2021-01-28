@@ -17,7 +17,9 @@ Suggests:
 Imports: 
     dplyr,
     purrr,
-    rlang
+    rlang,
+    tidyselect,
+    tidyr
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
