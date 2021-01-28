@@ -26,9 +26,7 @@ select_sample_str(
 }
 \arguments{
 \item{sampling_frame}{\code{tibble} with the sampling frame it must contain a
-column with the stratum.
-@param allocation \code{data.frame} with a column defining the strata and a
-column with sample size allocations for each stratum (one line per stratum).}
+column with the stratum.}
 
 \item{stratum}{unquoted column with strata in the allocation and
 sampling_frame \code{tibble}'s (the columns must have the same name in the
@@ -43,8 +41,14 @@ numeric value indicating the fraction of the data to select.}
 \item{replace}{logical value indicating whether the sample should be selected
 with replacement.}
 
+\item{allocation}{\code{data.frame} with a column defining the strata and a
+column with sample size allocations for each stratum (one line per stratum).}
+
 \item{sample_size}{unquoted column with sample sizes in the allocation
 data.frame}
+
+\item{is_frac}{logical value indicating whether the allocation data.frame contains
+proportions to be sampled within each stratum (TRUE) or sample sizes.}
 }
 \value{
 A \code{tibble} with the selected sample, it will have the same

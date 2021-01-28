@@ -3,3 +3,4 @@
 export(select_sample_prop)
 export(select_sample_str)
 importFrom(dplyr,"%>%")
+importFrom(rlang,":=")

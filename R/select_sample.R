@@ -5,7 +5,7 @@
 #'   across strata or when selecting a simple random sample.
 #' @param sampling_frame \code{tibble} with the sampling frame it must contain a
 #'   column with the stratum.
-#'  @param allocation \code{data.frame} with a column defining the strata and a
+#' @param allocation \code{data.frame} with a column defining the strata and a
 #'   column with sample size allocations for each stratum (one line per stratum).
 #' @param sample_size unquoted column with sample sizes in the allocation
 #'   data.frame
@@ -15,6 +15,8 @@
 #'   parameter is not used.
 #' @param frac when sampling with equal probability across strata, frac is a
 #'   numeric value indicating the fraction of the data to select.
+#' @param is_frac logical value indicating whether the allocation data.frame contains
+#'   proportions to be sampled within each stratum (TRUE) or sample sizes.
 #' @param replace logical value indicating whether the sample should be selected
 #' with replacement.
 #' @param seed integer value used to set the state of the random number generator.
@@ -42,6 +44,7 @@ select_sample_prop <- function(sampling_frame, stratum = stratum, frac,
 }
 
 #' @rdname select_sample
+#' @importFrom rlang :=
 #' @export
 select_sample_str <- function(sampling_frame, allocation,
                               sample_size = sample_size, stratum = stratum,
