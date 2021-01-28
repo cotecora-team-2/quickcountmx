@@ -33,12 +33,12 @@ select_sample_prop <- function(sampling_frame, stratum = stratum, frac,
                                seed = NA, replace = FALSE){
   if (!is.na(seed)) set.seed(seed)
   if (missing(stratum)) {
-    sample <- dplyr::sample_frac(sampling_frame, size = frac, replace = replace)
+    sample <- sample_frac(sampling_frame, size = frac, replace = replace)
   } else {
     sample <- sampling_frame %>%
-      dplyr::group_by({{ stratum }}) %>%
-      dplyr::sample_frac(size = frac, replace = replace) %>%
-      dplyr::ungroup()
+      group_by({{ stratum }}) %>%
+      sample_frac(size = frac, replace = replace) %>%
+      ungroup()
   }
   return(sample)
 }
@@ -54,21 +54,21 @@ select_sample_str <- function(sampling_frame, allocation,
 
   stratum_var_str <- deparse(substitute(stratum))
   frame_grouped_tbl <- sampling_frame %>%
-    dplyr::left_join(allocation, by = stratum_var_str) %>%
-    dplyr::group_by({{ stratum }})
+    left_join(allocation, by = stratum_var_str) %>%
+    group_by({{ stratum }})
 
   if (is_frac) {
     sample_tbl <- frame_grouped_tbl %>%
-      dplyr::sample_frac({{ sample_size }}, replace = replace)
+      sample_frac({{ sample_size }}, replace = replace)
   } else {
     # if sample size not integer we round it
     frame_grouped_tbl <- frame_grouped_tbl %>%
-      dplyr::mutate("{{ sample_size}}" := round({{sample_size}}))
+      mutate("{{ sample_size }}" := round({{sample_size}}))
     sample_tbl <- frame_grouped_tbl %>%
-      dplyr::sample_n({{ sample_size }}, replace = replace)
+      sample_n({{ sample_size }}, replace = replace)
   }
 
   sample_tbl <- sample_tbl %>%
-    dplyr::select(dplyr::any_of(colnames(sampling_frame)))
+    select(any_of(colnames(sampling_frame)))
   return(sample_tbl)
 }
