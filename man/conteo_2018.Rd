@@ -3,7 +3,7 @@
 \docType{data}
 \name{conteo_2018}
 \alias{conteo_2018}
-\title{Computos distritales for 2018 electino}
+\title{Computos distritales for 2018 election}
 \format{
 An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 156432 rows and 133 columns.
 }
