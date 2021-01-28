@@ -19,7 +19,8 @@ Imports:
     purrr,
     rlang,
     tidyselect,
-    tidyr
+    tidyr,
+    lubridate
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
