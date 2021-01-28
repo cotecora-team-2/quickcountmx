@@ -5,7 +5,7 @@
 \alias{conteo_2018}
 \title{Computos distritales for 2018 electino}
 \format{
-An object of class \code{spec_tbl_df} (inherits from \code{tbl_df}, \code{tbl}, \code{data.frame}) with 156840 rows and 95 columns.
+An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 156432 rows and 133 columns.
 }
 \source{
 \url{https://computos2018.ine.mx/#/presidencia/nacional/1/1/1/1}
