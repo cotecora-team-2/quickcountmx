@@ -3,12 +3,23 @@
 \name{select_sample}
 \alias{select_sample}
 \alias{select_sample_prop}
+\alias{select_sample_str}
 \title{Select simple and stratified random samples from a sampling frame.}
 \usage{
 select_sample_prop(
   sampling_frame,
   stratum = stratum,
   frac,
+  seed = NA,
+  replace = FALSE
+)
+
+select_sample_str(
+  sampling_frame,
+  allocation,
+  sample_size = sample_size,
+  stratum = stratum,
+  is_frac = FALSE,
   seed = NA,
   replace = FALSE
 )
@@ -29,6 +40,15 @@ numeric value indicating the fraction of the data to select.}
 
 \item{replace}{logical value indicating whether the sample should be selected
 with replacement.}
+
+\item{allocation}{\code{data.frame} with a column defining the strata and a
+column with sample size allocations for each stratum (one line per stratum).}
+
+\item{sample_size}{unquoted column with sample sizes in the allocation
+data.frame}
+
+\item{is_frac}{logical value indicating whether the allocation data.frame contains
+proportions to be sampled within each stratum (TRUE) or sample sizes.}
 }
 \value{
 A \code{tibble} with the selected sample, it will have the same

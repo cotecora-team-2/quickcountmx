@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 # quickcountmx
 
 <!-- badges: start -->
+[![R build status](https://github.com/cotecora-team-2/quickcountmx/workflows/R-CMD-check/badge.svg)](https://github.com/cotecora-team-2/quickcountmx/actions)
 <!-- badges: end -->
 
 Functions to simulate and estimate Mexican election results based on a simple or stratified random sample, the functions were used, among other methodologies, to anticipate the final results of the 2021 Mexican elections.

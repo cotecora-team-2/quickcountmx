@@ -11,8 +11,13 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Suggests: 
-    testthat
+    testthat,
+    knitr,
+    rmarkdown
 Imports: 
-    dplyr
+    dplyr,
+    purrr,
+    rlang
+VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
