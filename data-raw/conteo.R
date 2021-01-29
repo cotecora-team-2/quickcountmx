@@ -35,9 +35,26 @@ conteo_2018 <- read_delim("./data-raw/presidencia.csv", delim = "|",
                           TRUE ~ 0)) %>%
   left_join(marco_ext %>%
               select(CLAVE_CASILLA, estrato, tipo_seccion, TIPO_CASILLA, TVIVHAB:VPH_SNBIEN),
-            by = c("CLAVE_CASILLA"))
-  #filter(TOTAL_VOTOS_CALCULADOS != 0) %>% # alrededor de 200 casillas no entregadas
-  #filter(!is.na(tipo_seccion)) # casillas
+            by = c("CLAVE_CASILLA")) %>%
+  filter(TOTAL_VOTOS_CALCULADOS != 0) %>% # alrededor de 200 casillas no entregadas
+  filter(!is.na(tipo_seccion)) # casillas
+
+conteo_2018 <- conteo_2018 %>%
+  mutate(across(VPH_PISOTI:VPH_S_ELEC, ~ .x / (1 + TVIVPARHAB), .names = "p_{.col}"))
+
+# agregar componente principal
+comps_1 <- prcomp(conteo_2018 %>% select(p_VPH_PISOTI:p_VPH_TV),
+                  center = TRUE, scale = TRUE)
+#summary(comps_1)
+
+conteo_2018 <- conteo_2018 %>%
+  tidyr::nest(data = everything()) %>%
+  mutate(pca = purrr::map(data, ~ stats::prcomp(.x %>% select(p_VPH_PISOTI:p_VPH_TV),
+                                  center = TRUE, scale = TRUE)),
+         pca_aug = purrr::map2(pca, data, ~ broom::augment(.x, data = .y)))
+conteo_2018 <- select(conteo_2018, pca_aug) %>%
+  tidyr::unnest(cols = pca_aug)
+
 
 
 write_csv(conteo_2018, "data-raw/conteo_2018.csv")

@@ -17,7 +17,10 @@ Suggests:
 Imports: 
     dplyr,
     purrr,
-    rlang
+    rlang,
+    tidyselect,
+    tidyr,
+    lubridate
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)

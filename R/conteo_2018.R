@@ -1,4 +1,4 @@
-#' Computos distritales for 2018 electino
+#' Computos distritales for 2018 election
 #'
 #' Contains results of vote counts for the 2018 presidential election in Mexico
 #'

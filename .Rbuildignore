@@ -3,3 +3,4 @@
 ^README\.Rmd$
 ^data-raw$
 ^\.github$
+LICENSE.md
