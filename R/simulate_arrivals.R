@@ -8,6 +8,7 @@
 #' @param states character vector with states for which model should
 #' be fit
 #' @importFrom dplyr %>%
+#' @importFrom stats as.formula predict
 #' @export
 fit_model <- function(arrivals_tbl, states){
   arrivals_tbl_2 <- arrivals_tbl %>%
