@@ -57,25 +57,20 @@ muestra_tot <-
 
 # Construir datos de llegadas
 arrivals_tbl <- muestra_tot %>%
-  select(timestamp, huso, llegada, state_abbr, tipo_casilla,
-         tipo_seccion,TVIVPARHAB, VPH_INTER, VPH_PISOTI, VPH_LAVAD, VPH_REFRI,
+  select(CLAVE_CASILLA, timestamp, huso, llegada, state_abbr, tipo_casilla,
+         tipo_seccion, TVIVPARHAB, VPH_INTER, VPH_PISOTI, VPH_LAVAD, VPH_REFRI,
          VPH_CEL, .fittedPC1:.fittedPC5,
          RAC, JAMK, AMLO,
          lista_nominal_log, ln_log_c,
          TOTAL_VOTOS_CALCULADOS,
-         LISTA_NOMINAL, ID_ESTRATO_F.x, ID_AREA_RESPONSABILIDAD.x,
+         LISTA_NOMINAL,
          TOTAL, ID_ESTADO) %>%
   mutate(timestamp = if_else(is.na(timestamp),
                              lubridate::ymd_hms("2018-07-01 23:59:59", tz = "America/Mexico_City"), timestamp)) %>%
   mutate(timestamp = lubridate::with_tz(timestamp, "America/Mexico_City")) %>%
-  mutate(tiempo = difftime(timestamp,
+  mutate(time = difftime(timestamp,
                            lubridate::ymd_hms("2018-07-01 18:30:00", tz ="America/Mexico_City"),
                            units = "hours")) %>%
-  mutate(cae = paste0(ID_ESTRATO_F.x, ID_AREA_RESPONSABILIDAD.x)) %>%
-  group_by(cae) %>%
-  mutate(n_reporte = rank(timestamp)) %>%
-  ungroup %>%
-  group_by(state_abbr) %>%
   mutate(status = llegada)
 
 
