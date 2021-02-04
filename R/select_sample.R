@@ -1,11 +1,11 @@
 #' Select simple and stratified random samples from a sampling frame.
 #'
-#' Select Simple Randmom Samples and Stratified Random Samples,
+#' Select Simple Random Samples and Stratified Random Samples,
 #' \code{select_sample_prop} can be used when sampling with equal probability
 #'   across strata or when selecting a simple random sample.
 #' @param sampling_frame \code{tibble} with the sampling frame it must contain a
 #'   column with the stratum.
-#' @param allocation \code{data.frame} with a column defining the strata and a
+#' @param allocation \code{tibble} with a column defining the strata and a
 #'   column with sample size allocations for each stratum (one line per stratum).
 #' @param sample_size unquoted column with sample sizes in the allocation
 #'   data.frame

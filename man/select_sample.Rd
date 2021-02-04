@@ -41,7 +41,7 @@ numeric value indicating the fraction of the data to select.}
 \item{replace}{logical value indicating whether the sample should be selected
 with replacement.}
 
-\item{allocation}{\code{data.frame} with a column defining the strata and a
+\item{allocation}{\code{tibble} with a column defining the strata and a
 column with sample size allocations for each stratum (one line per stratum).}
 
 \item{sample_size}{unquoted column with sample sizes in the allocation
@@ -56,7 +56,7 @@ columns as the original sampling frame plus a column indicating the sample
 size in the stratum of each selected observation.
 }
 \description{
-Select Simple Randmom Samples and Stratified Random Samples,
+Select Simple Random Samples and Stratified Random Samples,
 \code{select_sample_prop} can be used when sampling with equal probability
 across strata or when selecting a simple random sample.
 }

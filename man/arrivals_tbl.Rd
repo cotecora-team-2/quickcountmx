@@ -5,7 +5,7 @@
 \alias{arrivals_tbl}
 \title{Arrival times for 2018 quickcount and computos distritales for 2018 election}
 \format{
-An object of class \code{grouped_df} (inherits from \code{tbl_df}, \code{tbl}, \code{data.frame}) with 7754 rows and 32 columns.
+An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 7754 rows and 29 columns.
 }
 \source{
 \url{https://computos2018.ine.mx/#/presidencia/nacional/1/1/1/1}
@@ -15,6 +15,6 @@ arrivals_tbl
 }
 \description{
 Contains results of vote counts for the observed sample
-for the quickcout in the 2018 presidential election in Mexico,
+for the quickcount in the 2018 presidential election in Mexico,
 }
 \keyword{datasets}
