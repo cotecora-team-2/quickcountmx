@@ -11,7 +11,8 @@ select_sample_prop(
   stratum = stratum,
   frac,
   seed = NA,
-  replace = FALSE
+  replace = FALSE,
+  min_stratum = 0
 )
 
 select_sample_str(
@@ -40,6 +41,9 @@ numeric value indicating the fraction of the data to select.}
 
 \item{replace}{logical value indicating whether the sample should be selected
 with replacement.}
+
+\item{min_stratum}{minimum sample size within strata, if greater than zero, could lead ti
+non-proportional allocation.}
 
 \item{allocation}{\code{tibble} with a column defining the strata and a
 column with sample size allocations for each stratum (one line per stratum).}
