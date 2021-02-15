@@ -20,6 +20,8 @@
 #' @param replace logical value indicating whether the sample should be selected
 #' with replacement.
 #' @param seed integer value used to set the state of the random number generator.
+#' @param min_stratum minimum sample size within strata, if greater than zero, could lead ti
+#' non-proportional allocation.
 #' @return A \code{tibble} with the selected sample, it will have the same
 #'   columns as the original sampling frame plus a column indicating the sample
 #'   size in the stratum of each selected observation.
@@ -30,14 +32,14 @@ NULL
 #' @rdname select_sample
 #' @export
 select_sample_prop <- function(sampling_frame, stratum = stratum, frac,
-                               seed = NA, replace = FALSE){
+                               seed = NA, replace = FALSE, min_stratum = 0){
   if (!is.na(seed)) set.seed(seed)
   if (missing(stratum)) {
     sample <- sample_frac(sampling_frame, size = frac, replace = replace)
   } else {
     sample <- sampling_frame %>%
       group_by({{ stratum }}) %>%
-      sample_frac(size = frac, replace = replace) %>%
+      sample_frac(size = max(frac, min_stratum / n()), replace = replace) %>%
       ungroup()
   }
   return(sample)
