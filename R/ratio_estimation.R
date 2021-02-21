@@ -54,7 +54,6 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
   if(n_distinct(data_tbl$strata) < n_distinct(data_stratum$strata)) {
     data_stratum <- collapse_strata(data_tbl, data_stratum)
   }
-  print(n_distinct(data_stratum$strata))
   data_tbl <- data_tbl %>%
     left_join(data_stratum, by = "strata")
   ratios <- data_tbl %>%
@@ -105,13 +104,15 @@ sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties){
 # auxiliary function, to collapse strata
 collapse_strata <- function(data_tbl, data_stratum){
   data_obs <- data_tbl %>%
-    count(strata, name = "n_observed")
+    count(strata, name = "n_observed") %>%
+    mutate(strata = as.character(strata))
   data_missings <- data_stratum %>%
+    mutate(strata = as.character(strata)) %>%
     left_join(data_obs, by = "strata")
   data_strata_collapsed <- data_missings %>%
     rowwise() %>%
     mutate(strata = ifelse(is.na(n_observed),
-                           sample(na.omit(data_missings$strata), 1),
+                           sample(stats::na.omit(data_missings$strata), 1),
                            strata)) %>%
     group_by(strata) %>%
     summarise(n_strata = sum(n_strata)) %>%
