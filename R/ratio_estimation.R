@@ -52,10 +52,12 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
 
   # collapse strata if needed
   if(n_distinct(data_tbl$strata) < n_distinct(data_stratum$strata)) {
-    data_stratum <- collapse_strata(data_tbl, data_stratum)
+    data_stratum_collapsed <- collapse_strata(data_tbl, data_stratum)
+  } else {
+    data_stratum_collapsed <- data_stratum
   }
   data_tbl <- data_tbl %>%
-    left_join(data_stratum, by = "strata")
+    left_join(data_stratum_collapsed, by = "strata")
   ratios <- data_tbl %>%
     group_by(strata) %>%
     mutate(n_h = n()) %>%
