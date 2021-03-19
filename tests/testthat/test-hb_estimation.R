@@ -1,4 +1,6 @@
 set.seed(823)
+cmdstanr::install_cmdstan(cores = 2)
+
 test_tbl <- dplyr::tibble(
   id_station = 1:29,
   state = c(rep("A", 10), rep("B", 10), rep("C", 5), rep("D", 4)),
