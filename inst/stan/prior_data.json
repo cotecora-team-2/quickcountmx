@@ -1,0 +1,7 @@
+{
+  "beta_0_param": [-2, 1],
+  "sigma_param":[0.5],
+  "kappa_param": [1, 0.1],
+  "sigma_coefs": [0.25],
+  "f_bias": [10.0]
+}
