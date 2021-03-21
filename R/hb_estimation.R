@@ -33,9 +33,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, data_stratum, parties,
                           num_iter = 1000, chains = 3){
 
   parties_enquo <- enquo(parties)
-  party_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
   covariates_enquo <- enquo(covariates)
-  covariates_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
 
   data_stratum <- data_stratum %>%
     rename(strata = {{ stratum }}) %>%
@@ -51,7 +49,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, data_stratum, parties,
   parameters <- jsonlite::read_json(json_path, simplifyVector = TRUE)
 
   data_list <- create_hb_data(data_tbl, data_stratum,
-                              parties = party_select, covariates = covariates_select,
+                              parties = !!parties_enquo, covariates = !!covariates_enquo,
                               prop_obs = prop_obs)
   stan_data <- c(parameters, data_list)
   parties_name <- stan_data$parties_name
