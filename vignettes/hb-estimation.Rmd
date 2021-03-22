@@ -84,14 +84,20 @@ is based on arrival modeling for thet 2018 sample, so it should be used with thi
 in mind:
 
 ```{r, messages = FALSE, warning = FALSE}
-# random censoring to illustrate
-sample_censored <- sample_frac(sample, 0.7)
+# consider observed arrival times
+data("arrivals_tbl")
+sample_censored <- conteo %>% 
+  left_join(arrivals_tbl %>% select(CLAVE_CASILLA, time)) %>%
+  filter(!is.na(time)) %>% 
+  filter(time < 2) 
+# 3 hours later gives around 50% of sample:
+prop_obs <- 0.50
 estimates <- hb_estimation(sample_censored, stratum = distrito_f,
                       id_station = no_casilla,
                       sampling_frame =  conteo,
                       parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")),
                       covariates = .fittedPC1,
-                      prop_obs = 0.7, 
+                      prop_obs = prop_obs, 
                       chains = 1, num_iter = 500, # increase chains and num_iter
                       seed = 123)
 ```
