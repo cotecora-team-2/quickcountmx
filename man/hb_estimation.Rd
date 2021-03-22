@@ -8,7 +8,7 @@ hb_estimation(
   data_tbl,
   stratum,
   id_station,
-  data_stratum,
+  sampling_frame,
   parties,
   covariates,
   prop_obs = 0.995,
@@ -24,10 +24,10 @@ hb_estimation(
 \item{stratum}{Unquoted variable indicating the stratum for each polling
 station.}
 
-\item{id_station}{Unquoted variable indicating the idfor each polling
+\item{id_station}{Unquoted variable indicating the id for each polling
 station.}
 
-\item{data_stratum}{Data frame with stratum variable (named exactly as in
+\item{sampling_frame}{Data frame with stratum variable (named exactly as in
 \code{data}) and number of polling stations per strata.}
 
 \item{parties}{Unquoted variables indicating the number of votes in each polling
@@ -56,7 +56,7 @@ Compute point estimate and credible intervals for each candidate.
 }
 \details{
 Posterior simulations of parameters are computed using stan,
-and each party's votes are simulated en every polling station. There is one
+and each party's votes are simulated for every polling station. There is one
 independent model for each party, and proportions are calculated from posterior simulations
 of total votes.
 }
