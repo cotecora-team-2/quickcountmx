@@ -32,7 +32,7 @@ test_that("test call", {
   sample_tbl <-
     select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
   estimates <- hb_estimation(sample_tbl, stratum = state,
-                                data_stratum = test_tbl,
+                                sampling_frame = test_tbl,
                                 prop_obs = 0.9, seed = 12,
                                 parties = cand_1:otro, covariates = x1:x_2,
                              num_iter = 100, chains = 1)
