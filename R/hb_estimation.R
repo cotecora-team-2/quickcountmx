@@ -10,7 +10,7 @@
 #'   station.
 #' @param id_station Unquoted variable indicating the id for each polling
 #'   station.
-#' @param sampling_frame Sampling frame with stratum variable (named exactly as in
+#' @param sampling_frame \code{tibble} of sampling frame with stratum variable (named exactly as in
 #'   \code{data_tbl}) and covariates.
 #' @param parties Unquoted variables indicating the number of votes in each polling
 #'   station for each candidate.
