@@ -21,7 +21,12 @@ Imports:
     tidyselect,
     tidyr,
     lubridate,
-    survival
+    survival,
+    cmdstanr,
+    posterior,
+    jsonlite
+Remotes:
+    github::stan-dev/cmdstanr
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
