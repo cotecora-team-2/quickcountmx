@@ -22,7 +22,8 @@
 #' @param return_fit Returns summary if FALSE (default), otherwise return cmdstanr fit
 #' @param num_iter Number of post warmup iterations
 #' @param chains Number of chains (will be run in parallel)
-#' @return A \code{tibble} including point estimates for each party (median)
+#' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
+#' estimates including point estimates for each party (median)
 #'   and limits of credible intervals.
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
@@ -62,16 +63,19 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       chains = chains,
                       refresh = 250,
                       parallel_chains = chains,
+                      step_size = 0.02,
                       adapt_delta = 0.98,
                       max_treedepth = 12)
+  output <- list()
+  output$fit <- NULL
   if(return_fit == TRUE){
-    return(fit)
-  } else {
-    sims_tbl <- fit$draws("prop_votos") %>%
+    output$fit <- fit
+  }
+  sims_tbl <- fit$draws("prop_votos") %>%
       posterior::as_draws_df() %>%
       dplyr::as_tibble()
-    names(sims_tbl)[1:length(parties_name)] <- parties_name
-    estimates_tbl <- sims_tbl %>%
+  names(sims_tbl)[1:length(parties_name)] <- parties_name
+  estimates_tbl <- sims_tbl %>%
       tidyr::pivot_longer(cols = all_of(parties_name), names_to = "party",
                    values_to = "value") %>%
       group_by(party) %>%
@@ -79,9 +83,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                 inf = quantile(value, 0.025),
                 sup = quantile(value, 0.975),
                 n_sim = length(value))
-    return(estimates_tbl)
-  }
-
+  output$estimates <- estimates_tbl
+  return(output)
 }
 
 create_hb_data <- function(data_tbl, sampling_frame, parties,

@@ -19,7 +19,7 @@ hb_estimation(
 )
 }
 \arguments{
-\item{data_tbl}{\code{tibble} of sample data}
+\item{data_tbl}{\code{tibble} of sample data.}
 
 \item{stratum}{Unquoted variable indicating the stratum for each polling
 station.}
@@ -27,8 +27,8 @@ station.}
 \item{id_station}{Unquoted variable indicating the id for each polling
 station.}
 
-\item{sampling_frame}{Data frame with stratum variable (named exactly as in
-\code{data}) and number of polling stations per strata.}
+\item{sampling_frame}{\code{tibble} of sampling frame with stratum variable (named exactly as in
+\code{data_tbl}) and covariates.}
 
 \item{parties}{Unquoted variables indicating the number of votes in each polling
 station for each candidate.}
@@ -48,7 +48,8 @@ generator (optional).}
 \item{chains}{Number of chains (will be run in parallel)}
 }
 \value{
-A \code{tibble} including point estimates for each party (median)
+A list with model fit (if return_fit=TRUE) and a \code{tibble}
+estimates including point estimates for each party (median)
 and limits of credible intervals.
 }
 \description{
