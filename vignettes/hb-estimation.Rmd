@@ -67,7 +67,7 @@ compilation of model is needed). chains and num_iter should be increased
 in the following example:
 
 ```{r, messages = FALSE, warning = FALSE}
-estimates <- hb_estimation(sample, stratum = distrito_f,
+fit_estimates <- hb_estimation(sample, stratum = distrito_f,
                       id_station = no_casilla,
                       sampling_frame =  conteo,
                       parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")),
@@ -78,6 +78,7 @@ estimates <- hb_estimation(sample, stratum = distrito_f,
 
 
 ```{r}
+estimates <- fit_estimates$estimates
 estimates %>% mutate(across(where(is.numeric), ~round(.x, 3)))
 ```
 We can also work with a time censored sample. The correction to interval width
@@ -93,7 +94,7 @@ sample_censored <- conteo %>%
   filter(time < 2) 
 # 3 hours later gives around 50% of sample:
 prop_obs <- 0.50
-estimates <- hb_estimation(sample_censored, stratum = distrito_f,
+fit_estimates <- hb_estimation(sample_censored, stratum = distrito_f,
                       id_station = no_casilla,
                       sampling_frame =  conteo,
                       parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")),
@@ -104,5 +105,6 @@ estimates <- hb_estimation(sample_censored, stratum = distrito_f,
 ```
 
 ```{r}
+estimates <- fit_estimates$estimates
 estimates %>% mutate(across(where(is.numeric), ~round(.x, 3)))
 ```

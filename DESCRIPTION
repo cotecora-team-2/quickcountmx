@@ -1,6 +1,6 @@
 Package: quickcountmx
 Title: Quick-count estimation package for the 2021 Mexican election
-Version: 0.0.0.9000
+Version: 0.1
 Authors@R:
     c(person("Teresa", "Ortiz", email = "teresa.ortiz.mancera@gmail.com", role = c("aut", "cre")), 
       person("Felipe", "Gonzalez", email = "felipexgonzalez@gmail.com", role = c("aut")))
