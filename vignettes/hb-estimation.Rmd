@@ -20,6 +20,8 @@ cmdstanr::install_cmdstan(cores = 2, quiet = TRUE)
 ```
 
 
+## Estimation and testing with 2018 results
+
 ```{r}
 library(dplyr)
 library(tidyr)
@@ -101,6 +103,62 @@ fit_estimates <- hb_estimation(sample_censored, stratum = distrito_f,
                       chains = 1, num_iter = 500, # increase chains and num_iter
                       seed = 123)
 ```
+
+```{r}
+estimates <- fit_estimates$estimates
+estimates %>% mutate(across(where(is.numeric), ~round(.x, 3)))
+```
+
+## Estimation and testing with 2015 state results
+
+```{r}
+data("conteo_estados_2015")
+nrow(nay_2015)
+```
+
+```{r}
+conteo <- nay_2015 %>%
+  mutate(TOTAL_VOTOS_CALCULADOS = CAND1 + CAND2 + CAND3 + CAND4 + CAND5 + CAND6 + CAND7 + CAND8 + OTROS) %>%
+  mutate(ID_DISTRITO = ID_DISTRITO_15) %>%
+  filter(TOTAL_VOTOS_CALCULADOS!= 0) %>%
+  filter(ID_DISTRITO != 0) %>%
+  mutate(distrito_f = interaction(ID_ESTADO, ID_DISTRITO)) %>%
+  mutate(no_casilla = row_number()) %>%
+  mutate(ln = ifelse(LISTA_NOMINAL_15==0, 1200, LISTA_NOMINAL_15))
+
+final_computos <- conteo %>%
+select(any_of(c("CAND1", "CAND2", "CAND3", "CAND4", "CAND5", "CAND6", "CAND7", "CAND8",
+"OTROS", "TOTAL_VOTOS_CALCULADOS"))) %>%
+summarise(across(where(is.numeric), ~ sum(.x, na.rm = TRUE))) %>%
+mutate(across(where(is.numeric), ~ .x / TOTAL_VOTOS_CALCULADOS))%>%
+pivot_longer(cols = everything(), names_to = "candidato", values_to = "prop")
+final_computos
+```
+
+
+To select a proportional sample
+
+```{r}
+sample <- select_sample_prop(conteo, 
+                             stratum = estrato_df, frac = 0.15, seed = 100)
+nrow(sample)
+```
+
+
+Bayesian estimates (the first time running will take longer because
+compilation of model is needed). chains and num_iter should be increased
+in the following example:
+
+```{r, messages = FALSE, warning = FALSE}
+fit_estimates <- hb_estimation(sample, stratum = estrato_df,
+                      id_station = no_casilla,
+                      sampling_frame =  conteo,
+                      parties = all_of(contains("CAND")),
+                      covariates = .fittedPC1,
+                      chains = 1, num_iter = 500, # increase chains and num_iter
+                      seed = 123)
+```
+
 
 ```{r}
 estimates <- fit_estimates$estimates

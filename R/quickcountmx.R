@@ -12,7 +12,8 @@ NULL
 
 ####Ratio estimation####
 globalVariables(c("strata", "n_strata", "n_h", "n_votes", "party", "n_aux",
-                  "prop", "party", "total_votes", "strata", "n_strata", "n_observed"))
+                  "prop", "party", "total_votes", "strata", "n_strata", "n_observed", "strata_num",
+                  "value", "id_station"))
 
 ####Simulation of arrival times####
 globalVariables(c("state_abbr", "time", "huso", "lista_nominal_log",

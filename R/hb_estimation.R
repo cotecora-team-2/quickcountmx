@@ -91,10 +91,10 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       tidyr::pivot_longer(cols = all_of(parties_name), names_to = "party",
                    values_to = "value") %>%
       group_by(party) %>%
-      summarise(median = median(value),
-                inf = quantile(value, 0.02),
-                sup = quantile(value, 0.98),
-                ee = sd(value),
+      summarise(median = stats::median(value),
+                inf = stats::quantile(value, 0.02),
+                sup = stats::quantile(value, 0.98),
+                ee = stats::sd(value),
                 n_sim = length(value))
   output$estimates <- estimates_tbl
   return(output)
