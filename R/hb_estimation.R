@@ -33,7 +33,7 @@
 #' @export
 hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties,
                           covariates,
-                          prop_obs = 0.995, seed = NA, return_fit = FALSE,
+                          prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 1000, chains = 3, model = "mlogit", part = FALSE){
 
   sampling_frame <- sampling_frame %>%
@@ -70,7 +70,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   model <- cmdstanr::cmdstan_model(path)
   ## fit
   fit <- model$sample(data = stan_data,
-                      seed = 883298,
+                      seed = seed,
                       iter_sampling = num_iter,
                       iter_warmup = iter_warmup,
                       chains = chains,
