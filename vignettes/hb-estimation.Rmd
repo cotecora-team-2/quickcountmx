@@ -86,12 +86,10 @@ is based on arrival modeling for thet 2018 sample, so it should be used with thi
 in mind:
 
 ```{r, messages = FALSE, warning = FALSE}
-# consider observed arrival times
-data("arrivals_tbl")
-sample_censored <- conteo %>% 
-  left_join(arrivals_tbl %>% select(CLAVE_CASILLA, time)) %>%
-  filter(!is.na(time)) %>% 
-  filter(time < 2) 
+# consider observed arrival times to do censoring
+#data("arrivals_tbl")
+sample_censored <- sample %>% 
+  sample_frac(0.5)
 # 3 hours later gives around 50% of sample:
 prop_obs <- 0.50
 fit_estimates <- hb_estimation(sample_censored, stratum = distrito_f,

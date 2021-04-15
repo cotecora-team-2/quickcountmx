@@ -15,7 +15,8 @@ hb_estimation(
   seed = NA,
   return_fit = FALSE,
   num_iter = 1000,
-  chains = 3
+  chains = 3,
+  model = "mlogit"
 )
 }
 \arguments{
@@ -46,6 +47,8 @@ generator (optional).}
 \item{num_iter}{Number of post warmup iterations}
 
 \item{chains}{Number of chains (will be run in parallel)}
+
+\item{model}{One of "mlogit" (the default) or "logit"}
 }
 \value{
 A list with model fit (if return_fit=TRUE) and a \code{tibble}
@@ -57,7 +60,8 @@ Compute point estimate and credible intervals for each candidate.
 }
 \details{
 Posterior simulations of parameters are computed using stan,
-and each party's votes are simulated for every polling station. There is one
+and each party's votes are simulated for every polling station (logit model)
+or with a softmax link for the default (mlogit model). There is one
 independent model for each party, and proportions are calculated from posterior simulations
 of total votes.
 }

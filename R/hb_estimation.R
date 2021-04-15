@@ -2,7 +2,8 @@
 #'
 #' Compute point estimate and credible intervals for each candidate.
 #' @details Posterior simulations of parameters are computed using stan,
-#' and each party's votes are simulated for every polling station. There is one
+#' and each party's votes are simulated for every polling station (logit model)
+#' or with a softmax link for the default (mlogit model). There is one
 #' independent model for each party, and proportions are calculated from posterior simulations
 #' of total votes.
 #' @param data_tbl \code{tibble} of sample data.
@@ -22,6 +23,7 @@
 #' @param return_fit Returns summary if FALSE (default), otherwise return cmdstanr fit
 #' @param num_iter Number of post warmup iterations
 #' @param chains Number of chains (will be run in parallel)
+#' @param model One of "mlogit" (the default) or "logit"
 #' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals.
@@ -31,7 +33,7 @@
 hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties,
                           covariates,
                           prop_obs = 0.995, seed = NA, return_fit = FALSE,
-                          num_iter = 1000, chains = 3){
+                          num_iter = 1000, chains = 3, model = "mlogit"){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -53,19 +55,29 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   parties_name <- stan_data$parties_name
   stan_data$parties_name <- NULL
   # Compile model
-  path <- system.file("stan", "model_parties.stan", package = "quickcountmx")
+  if(model == "logit"){
+    path <- system.file("stan", "model_parties.stan", package = "quickcountmx")
+    adapt_delta <- 0.98
+    max_treedepth <- 12
+    iter_warmup <- 1000
+  } else {
+    path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
+    adapt_delta <- 0.80
+    max_treedepth <- 10
+    iter_warmup <- 200
+  }
   model <- cmdstanr::cmdstan_model(path)
   ## fit
   fit <- model$sample(data = stan_data,
                       seed = 883298,
                       iter_sampling = num_iter,
-                      iter_warmup = 1000,
+                      iter_warmup = iter_warmup,
                       chains = chains,
                       refresh = 250,
                       parallel_chains = chains,
                       step_size = 0.02,
-                      adapt_delta = 0.98,
-                      max_treedepth = 12)
+                      adapt_delta = adapt_delta,
+                      max_treedepth = max_treedepth)
   output <- list()
   output$fit <- NULL
   if(return_fit == TRUE){
@@ -80,8 +92,9 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                    values_to = "value") %>%
       group_by(party) %>%
       summarise(median = median(value),
-                inf = quantile(value, 0.025),
-                sup = quantile(value, 0.975),
+                inf = quantile(value, 0.02),
+                sup = quantile(value, 0.98),
+                ee = sd(value),
                 n_sim = length(value))
   output$estimates <- estimates_tbl
   return(output)
