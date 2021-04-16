@@ -75,7 +75,7 @@ fit_estimates <- hb_estimation(sample, stratum = distrito_f,
                       parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")),
                       covariates = .fittedPC1,
                       chains = 1, num_iter = 500, # increase chains and num_iter
-                      seed = 123)
+                      seed = 123, part = TRUE)
 ```
 
 
@@ -112,7 +112,7 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 3)))
 ## Estimation and testing with 2015 state results
 
 ```{r}
-data("conteo_estados_2015")
+data("nay_2015")
 nrow(nay_2015)
 ```
 
@@ -153,7 +153,7 @@ in the following example:
 fit_estimates <- hb_estimation(sample, stratum = estrato_df,
                       id_station = no_casilla,
                       sampling_frame =  conteo,
-                      parties = all_of(contains("CAND")),
+                      parties = c(all_of(contains("CAND")), OTROS),
                       covariates = .fittedPC1,
                       chains = 1, num_iter = 500, # increase chains and num_iter
                       seed = 123)

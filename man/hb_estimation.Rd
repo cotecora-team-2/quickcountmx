@@ -12,11 +12,12 @@ hb_estimation(
   parties,
   covariates,
   prop_obs = 0.995,
-  seed = NA,
+  seed = NULL,
   return_fit = FALSE,
   num_iter = 1000,
   chains = 3,
-  model = "mlogit"
+  model = "mlogit",
+  part = FALSE
 )
 }
 \arguments{
@@ -49,6 +50,8 @@ generator (optional).}
 \item{chains}{Number of chains (will be run in parallel)}
 
 \item{model}{One of "mlogit" (the default) or "logit"}
+
+\item{part}{Estimate total voter turnout (part). Default is FALSE.}
 }
 \value{
 A list with model fit (if return_fit=TRUE) and a \code{tibble}

@@ -31,12 +31,19 @@ data {
 transformed data {
   int<lower=0> total_f[N_f] ; // observed totals
   int<lower=0> total[N] ; // observed totals
+  real<lower=0> total_nominal;
 
   for(i in 1:N_f){
     total_f[i] = sum(y_f[i, ]);
   }
   for(i in 1:N){
     total[i] = sum(y[i, ]);
+  }
+  total_nominal = 0;
+  for(i in 1:N_f){
+    if(n_f[i] < 1200){
+      total_nominal += n_f[i];
+    }
   }
 
 }
@@ -174,7 +181,7 @@ generated quantities {
   for(k in 1:p){
     prop_votos[k] = y_out[k] / total_cnt;
   }
-  participacion = total_cnt / sum(n_f);
+  participacion = total_cnt / total_nominal;
 }
 
 

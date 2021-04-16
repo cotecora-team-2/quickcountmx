@@ -24,6 +24,7 @@
 #' @param num_iter Number of post warmup iterations
 #' @param chains Number of chains (will be run in parallel)
 #' @param model One of "mlogit" (the default) or "logit"
+#' @param part Estimate total voter turnout (part). Default is FALSE.
 #' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals.
@@ -32,8 +33,8 @@
 #' @export
 hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties,
                           covariates,
-                          prop_obs = 0.995, seed = NA, return_fit = FALSE,
-                          num_iter = 1000, chains = 3, model = "mlogit"){
+                          prop_obs = 0.995, seed = NULL, return_fit = FALSE,
+                          num_iter = 1000, chains = 3, model = "mlogit", part = FALSE){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -69,7 +70,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   model <- cmdstanr::cmdstan_model(path)
   ## fit
   fit <- model$sample(data = stan_data,
-                      seed = 883298,
+                      seed = seed,
                       iter_sampling = num_iter,
                       iter_warmup = iter_warmup,
                       chains = chains,
@@ -96,6 +97,17 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                 sup = stats::quantile(value, 0.98),
                 ee = stats::sd(value),
                 n_sim = length(value))
+  if(part){
+    part_tbl <- fit$draws("participacion") %>%
+      posterior::as_draws_df() %>%
+      dplyr::as_tibble() %>%
+      summarise(median = stats::median(participacion),
+                inf = stats::quantile(participacion, 0.02),
+                sup = stats::quantile(participacion, 0.98),
+                ee = stats::sd(participacion),
+                n_sim = length(participacion))
+    estimates_tbl <- bind_rows(estimates_tbl, part_tbl %>% mutate(party = "part"))
+  }
   output$estimates <- estimates_tbl
   return(output)
 }
