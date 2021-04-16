@@ -12,7 +12,7 @@ hb_estimation(
   parties,
   covariates,
   prop_obs = 0.995,
-  seed = NA,
+  seed = NULL,
   return_fit = FALSE,
   num_iter = 1000,
   chains = 3,
