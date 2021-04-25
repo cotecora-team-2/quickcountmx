@@ -40,17 +40,15 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 #' @param file_name Name of the file with the data.
 #' @param path_results Path to the directory where partial results will be
 #' saved.
-#' @param path_out Path to directory where diagnostics, partial results, and
-#' data will be saved. Data is included in case there is need of additional
-#' checks.
+#' @param path_out Path to directory where compulsory partial results will be
+#' saved.
 #' @param team Name of team running the model, to be used in INE reports.
-#' @inheritParams mrp_estimation
+#' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day
 #' @export
 process_batch <- function(path_name, file_name, path_out, path_results,
-                          team = "default", n_iter = 4000, n_burnin = 3000, n_chains = 1,
-                          parallel = TRUE){
+                          team = "default", n_iter = 300, n_chains = 4){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
@@ -94,7 +92,7 @@ process_batch <- function(path_name, file_name, path_out, path_results,
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos),
-                          covariates = comp_marg_imp, num_iter = 300, chains = 4, part = TRUE)
+                          covariates = comp_marg_imp, num_iter = as.numeric(n_iter), chains = as.numeric(n_chains), part = TRUE)
   )
   print(fit_time)
 
