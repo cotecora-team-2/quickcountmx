@@ -14,7 +14,10 @@ hb_estimation(
   prop_obs = 0.995,
   seed = NULL,
   return_fit = FALSE,
-  num_iter = 1000,
+  num_iter = 200,
+  num_warmup = 200,
+  adapt_delta = 0.8,
+  max_treedepth = 10,
   chains = 3,
   model = "mlogit",
   part = FALSE
@@ -46,6 +49,12 @@ generator (optional).}
 \item{return_fit}{Returns summary if FALSE (default), otherwise return cmdstanr fit}
 
 \item{num_iter}{Number of post warmup iterations}
+
+\item{num_warmup}{Number of warmup iterations}
+
+\item{adapt_delta}{The adaptation target acceptance statistic (default 0.80.}
+
+\item{max_treedepth}{The maximum allowed tree depth for the NUTS engine (default 10)}
 
 \item{chains}{Number of chains (will be run in parallel)}
 
