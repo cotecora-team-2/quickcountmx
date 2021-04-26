@@ -1,5 +1,5 @@
 write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_casillas, n_casillas,
-                          path_out, path_results){
+                          path_out){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -98,6 +98,5 @@ process_batch <- function(path_name, file_name, path_out,
   write_results(fit = fit, file_name = file_name,
                 team = team, tot_estratos = tot_estratos, n_estratos = n_estratos,
                 tot_casillas, n_casillas,
-                path_out = path_out,
-                path_results = path_results)
+                path_out = path_out)
 }
