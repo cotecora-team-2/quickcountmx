@@ -22,6 +22,9 @@
 #' generator (optional).
 #' @param return_fit Returns summary if FALSE (default), otherwise return cmdstanr fit
 #' @param num_iter Number of post warmup iterations
+#' @param num_warmup Number of warmup iterations
+#' @param adapt_delta The adaptation target acceptance statistic (default 0.80.
+#' @param max_treedepth The maximum allowed tree depth for the NUTS engine (default 10)
 #' @param chains Number of chains (will be run in parallel)
 #' @param model One of "mlogit" (the default) or "logit"
 #' @param part Estimate total voter turnout (part). Default is FALSE.
@@ -34,7 +37,9 @@
 hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties,
                           covariates,
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
-                          num_iter = 1000, chains = 3, model = "mlogit", part = FALSE){
+                          num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
+                          max_treedepth = 10,
+                          chains = 3, model = "mlogit", part = FALSE){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -58,23 +63,23 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   # Compile model
   if(model == "logit"){
     path <- system.file("stan", "model_parties.stan", package = "quickcountmx")
-    adapt_delta <- 0.98
-    max_treedepth <- 12
-    iter_warmup <- 1000
+    adapt_delta <- adapt_delta
+    max_treedepth <- max_treedepth
+    iter_warmup <- num_warmup
   } else {
     path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
-    adapt_delta <- 0.80
-    max_treedepth <- 10
-    iter_warmup <- 200
+    adapt_delta <- adapt_delta
+    max_treedepth <- max_treedepth
+    iter_warmup <- num_warmup
   }
   model <- cmdstanr::cmdstan_model(path)
   ## fit
   fit <- model$sample(data = stan_data,
                       seed = seed,
                       iter_sampling = num_iter,
-                      iter_warmup = iter_warmup,
+                      iter_warmup = num_warmup,
                       chains = chains,
-                      refresh = 250,
+                      refresh = 200,
                       parallel_chains = chains,
                       step_size = 0.02,
                       adapt_delta = adapt_delta,
