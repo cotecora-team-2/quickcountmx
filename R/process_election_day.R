@@ -4,7 +4,7 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
   R <- stringr::str_sub(file_name, 12, 17)
 
   tab_candidatos <- fit$estimates %>%
-    dplyr::mutate(across(where(is.numeric), round, 2)) %>%
+    dplyr::mutate(across(where(is.numeric), round, 1)) %>%
     dplyr::arrange(desc(median)) %>% dplyr::select(party,median,inf,sup) %>% filter(party != "OTROS") %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
@@ -21,26 +21,24 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
     relocate(c(EQ,EN,R), .before = everything()) %>%
     relocate(c(PART,LMU), .after = last_col())
 
-  tab_compulsados <- tab_candidatos %>%
-    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
-           EST_REC = ifelse(LMU == 0,n_estratos,""),
-           TOT_CAS = ifelse(LMU == 0,tot_casillas,""),
-           CAS_REC = ifelse(LMU == 0,n_casillas,""),
-           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
+#  tab_compulsados <- tab_candidatos %>%
+#    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
+#           EST_REC = ifelse(LMU == 0,n_estratos,""),
+#           TOT_CAS = ifelse(LMU == 0,tot_casillas,""),
+#           CAS_REC = ifelse(LMU == 0,n_casillas,""),
+#           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
 
 
 
   readr::write_csv(tab_candidatos, file = paste0(path_out, "/", team,
                                                EN, R, ".csv"))
-  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
-                                                 EN, R, ".csv"))
+#  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
+#                                                 EN, R, ".csv"))
 }
 #' @param path_name Path to a file that will be used for estimation. On election
 #' day it will be a file with a subset of the sample.
 #' @param file_name Name of the file with the data.
-#' @param path_results Path to the directory where partial results will be
-#' saved.
-#' @param path_out Path to directory where compulsory partial results will be
+#' @param path_out Path to directory where partial results will be
 #' saved.
 #' @param team Name of team running the model, to be used in INE reports.
 #' @inheritParams hb_estimation
@@ -48,7 +46,8 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 #' @rdname process_batch_election_day
 #' @export
 process_batch <- function(path_name, file_name, path_out, path_results,
-                          team = "default", n_iter = 300, n_chains = 4){
+                          team = "default", n_iter = 300, n_chains = 4,
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)

@@ -1,11 +1,8 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_results /home/rstudio/workspace/cotecora/mancera/compulsado_zac --wait_sec 5 --n_chains 4 --n_iter 300 --team ortizm --last True
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_results /home/rstudio/workspace/cotecora/mancera/compulsado_zac --wait_sec 5 --n_chains 4 --team ortizm --last True
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_results /home/rstudio/workspace/cotecora/mancera/compulsado_zac --wait_sec 5 --n_iter 300 --team ortizm --last True
 # python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_results /home/rstudio/workspace/cotecora/mancera/compulsado_zac --wait_sec 5 --team ortizm --last True
 
-
+from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS
 import sys, getopt
 import os
 import time
@@ -53,9 +50,10 @@ def main(params):
       for filename in added:
         descriptores = procesar_nombre(filename)
         print(descriptores)
+        print("num_iter¨{}, num_warmup:{}, adapt_delta:{}, max_treedepth:{}, num_chains:{}".format(NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS))
         if(descriptores["tipo"] == "REMESAS"):
           full_path = os.path.join(params.data_path, filename)
-          subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.path_results+"','"+params.team+"',n_chains='"+str(params.n_chains)+"',n_iter='"+str(params.n_iter)+"')"])
+          subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.path_results+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"')"]) 
           subprocess.call(["sed","-i",'s/,,,,,$//g',params.path_results+'/compulsado'+descriptores['id_estado']+descriptores['fecha']+'.csv'])
     else:
       print('.', end = '', flush = True)
@@ -72,10 +70,6 @@ if __name__ == "__main__":
                         help="Data path of output")
     parser.add_argument("--path_results", "-pr", type=str,
                         help="Path of results")
-    parser.add_argument('--n_chains', "-ch", type=int, default=4,
-                        help="Number of chains for fit")
-    parser.add_argument('--n_iter', "-it", type=int, default=300,
-                        help="Number of chains for fit")
     parser.add_argument('--wait_sec', "-s", type=int,
                         help="Wait seconds")
     parser.add_argument('--team', "-t", type=str, default="default",
