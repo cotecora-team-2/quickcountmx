@@ -31,8 +31,6 @@ def procesar_nombre(filename):
 def main(params):
   if not os.path.exists(params.path_out):
     os.makedirs(params.path_out)
-  if not os.path.exists(params.path_results):
-    os.makedirs(params.path_results)
   print("Observando " + params.data_path + " cada "+ str(params.wait_sec) + " segundos.")
   files_before = [f for f in os.listdir(params.data_path) if f[:7] == "REMESAS"]
   files_before.sort()
@@ -68,8 +66,6 @@ if __name__ == "__main__":
                         help="A folder with this name would be created to dump saved models and log files")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
-    parser.add_argument("--path_results", "-pr", type=str,
-                        help="Path of results")
     parser.add_argument('--wait_sec', "-s", type=int,
                         help="Wait seconds")
     parser.add_argument('--team', "-t", type=str, default="default",
