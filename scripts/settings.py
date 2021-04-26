@@ -1,7 +1,7 @@
 import warnings
 import os
 
-dotvars_path = './.vars'
+dotvars_path = './_vars'
 
 if os.path.isfile(dotvars_path):
     with open(dotvars_path, 'r') as f:
