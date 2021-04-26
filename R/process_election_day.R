@@ -30,7 +30,7 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 
 
 
-  readr::write_csv(tab_candidatos, file = paste0(path_out, "/", team,
+  readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
                                                EN, R, ".csv"))
 #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
 #                                                 EN, R, ".csv"))
