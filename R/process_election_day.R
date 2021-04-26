@@ -45,7 +45,7 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 #'
 #' @rdname process_batch_election_day
 #' @export
-process_batch <- function(path_name, file_name, path_out, path_results,
+process_batch <- function(path_name, file_name, path_out,
                           team = "default", n_iter = 300, n_chains = 4,
                           n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10){
   print(team)
