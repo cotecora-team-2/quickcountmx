@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_results /home/rstudio/workspace/cotecora/mancera/compulsado_zac --wait_sec 5 --team ortizm --last True
+# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --wait_sec 5 --team ortizm --last True
 
 from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS
 import sys, getopt
