@@ -50,7 +50,14 @@ def main(params):
         print("B:{}".format(params.b))
         if(descriptores["tipo"] == "REMESAS"):
           full_path = os.path.join(params.data_path, filename)
-          subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
+          infile = open(full_path, 'r')
+          nrow = int(infile.readline())
+          infile.close()
+          print(nrow)
+          if nrow > 1:
+              subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
+          else:
+            print('numero de casillas = 1')
     else:
       print('.', end = '', flush = True)
     files_before = files_now
