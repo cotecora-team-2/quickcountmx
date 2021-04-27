@@ -4,6 +4,7 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
   R <- stringr::str_sub(file_name, 12, 17)
 
   tab_candidatos <- fit$estimates %>%
+    dplyr::mutate(across(where(is.numeric), ~. * 100)) %>%
     dplyr::mutate(across(where(is.numeric), round, 1)) %>%
     dplyr::arrange(desc(median)) %>% dplyr::select(party,median,inf,sup) %>% filter(party != "OTROS") %>%
     tibble::column_to_rownames(var="party") %>%
