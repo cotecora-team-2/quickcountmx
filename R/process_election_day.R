@@ -93,7 +93,7 @@ process_batch <- function(path_name, file_name, path_out,
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos),
                           covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
-                         chains = as.numeric(n_chains), seed = seed, part = TRUE)
+                         chains = as.numeric(n_chains), seed = as.numeric(seed), part = TRUE)
   )
   print(fit_time)
 
