@@ -1,26 +1,15 @@
-write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_casillas, n_casillas,
+write_results <- function(df, file_name, team, tot_estratos, n_estratos, tot_casillas, n_casillas,
                           path_out){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
-  tab_candidatos <- fit$estimates %>%
-    dplyr::mutate(across(where(is.numeric), ~. * 100)) %>%
-    dplyr::mutate(across(where(is.numeric), round, 1)) %>%
-    dplyr::arrange(desc(median)) %>% dplyr::select(party,median,inf,sup) %>% filter(party != "OTROS") %>%
+  tab_candidatos <- df %>%
+    dplyr::arrange(desc(prop)) %>% dplyr::select(party,prop,std_error) %>% filter(party != "OTROS") %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
-    tidyr::gather(LMU, value, -rowname) %>%
-    tidyr::spread(rowname, value) %>% dplyr::rename(PART = part) %>% dplyr::mutate(LMU = dplyr::case_when(
-      LMU == "inf" ~ 0,
-      LMU == "median" ~ 1,
-      LMU == "sup" ~ 2
-    ),
-    LMU = as.integer(LMU),
-    EQ = team,
-    EN = EN,
-    R = R ) %>%
-    relocate(c(EQ,EN,R), .before = everything()) %>%
-    relocate(c(PART,LMU), .after = last_col())
+    tidyr::gather(key, value, -rowname) %>%
+    tidyr::spread(rowname, value) %>%
+    relocate(c(key), .before = everything())
 
 #  tab_compulsados <- tab_candidatos %>%
 #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
@@ -31,7 +20,7 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 
 
 
-  readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
+  readr::write_csv(tab_candidatos, paste0(path_out, "/", 'razon',
                                                EN, R, ".csv"))
 #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
 #                                                 EN, R, ".csv"))
@@ -46,9 +35,8 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 #'
 #' @rdname process_batch_election_day
 #' @export
-process_batch <- function(path_name, file_name, path_out,
-                          team = "default", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, seed=221285){
+ratio_process_batch <- function(path_name, file_name, path_out, B,
+                          team = "default"){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
@@ -90,15 +78,14 @@ process_batch <- function(path_name, file_name, path_out,
 
   # run model ###################
   fit_time <- system.time(
-    fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
-                          sampling_frame = table_frame,
-                          parties = all_of(lista_candidatos),
-                          covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
-                         chains = as.numeric(n_chains), seed = as.numeric(seed), part = TRUE)
+    ratios <- ratio_estimation(muestra_m, stratum = estrato, n_stratum = n,
+                            data_stratum = data_stratum_tbl,
+                            parties = all_of(lista_candidatos), B = as.numeric(B))
   )
   print(fit_time)
+  print(ratios)
 
-  write_results(fit = fit, file_name = file_name,
+  write_results(df = ratios, file_name = file_name,
                 team = team, tot_estratos = tot_estratos, n_estratos = n_estratos,
                 tot_casillas, n_casillas,
                 path_out = path_out)

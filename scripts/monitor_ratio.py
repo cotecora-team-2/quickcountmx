@@ -2,7 +2,6 @@
 # usage:
 # python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --wait_sec 5 --team ortizm --last True
 
-from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS, SEED
 import sys, getopt
 import os
 import time
@@ -48,11 +47,10 @@ def main(params):
       for filename in added:
         descriptores = procesar_nombre(filename)
         print(descriptores)
-        print("num_iter:{}, num_warmup:{}, adapt_delta:{}, max_treedepth:{}, num_chains:{}".format(NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS))
+        print("B:{}".format(params.b))
         if(descriptores["tipo"] == "REMESAS"):
           full_path = os.path.join(params.data_path, filename)
-          subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"',seed='"+str(SEED)+"')"]) 
-          #subprocess.call(["sed","-i",'s/,,,,,$//g',params.path_results+'/compulsado'+descriptores['id_estado']+descriptores['fecha']+'.csv'])
+          subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
     else:
       print('.', end = '', flush = True)
     files_before = files_now
@@ -66,6 +64,8 @@ if __name__ == "__main__":
                         help="A folder with this name would be created to dump saved models and log files")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
+    parser.add_argument('--b', "-b", type=int, default=50,
+                        help="Number of bootstrap replicates used to compute standard errors")
     parser.add_argument('--wait_sec', "-s", type=int,
                         help="Wait seconds")
     parser.add_argument('--team', "-t", type=str, default="default",
