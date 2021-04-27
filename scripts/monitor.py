@@ -2,7 +2,7 @@
 # usage:
 # python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --wait_sec 5 --team ortizm --last True
 
-from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS
+from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS, SEED
 import sys, getopt
 import os
 import time
@@ -51,7 +51,7 @@ def main(params):
         print("num_iter¨{}, num_warmup:{}, adapt_delta:{}, max_treedepth:{}, num_chains:{}".format(NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS))
         if(descriptores["tipo"] == "REMESAS"):
           full_path = os.path.join(params.data_path, filename)
-          subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"')"]) 
+          subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"',seed='"+str(SEED)+"')"]) 
           #subprocess.call(["sed","-i",'s/,,,,,$//g',params.path_results+'/compulsado'+descriptores['id_estado']+descriptores['fecha']+'.csv'])
     else:
       print('.', end = '', flush = True)

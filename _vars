@@ -3,3 +3,4 @@ num_warmup=200
 adapt_delta=0.80
 max_treedepth=10
 num_chains=4
+seed=221285

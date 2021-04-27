@@ -48,7 +48,7 @@ write_results <- function(fit, file_name, team, tot_estratos, n_estratos, tot_ca
 #' @export
 process_batch <- function(path_name, file_name, path_out,
                           team = "default", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10){
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, seed=221285){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
@@ -92,7 +92,8 @@ process_batch <- function(path_name, file_name, path_out,
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos),
-                          covariates = comp_marg_imp, num_iter = as.numeric(n_iter), chains = as.numeric(n_chains), part = TRUE)
+                          covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
+                         chains = as.numeric(n_chains), seed = seed, part = TRUE)
   )
   print(fit_time)
 
