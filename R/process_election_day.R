@@ -1,5 +1,5 @@
 write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_casillas, n_casillas,
-                          path_out){
+                          path_out, path_mailbox){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -33,7 +33,9 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 
   readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
                                                EN, R, ".csv"))
-#  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
+  readr::write_csv(tab_candidatos, paste0(path_mailbox, "/", team,
+                                          EN, R, ".csv"))
+  #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
 #                                                 EN, R, ".csv"))
 }
 #' @param path_name Path to a file that will be used for estimation. On election
@@ -46,7 +48,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #'
 #' @rdname process_batch_election_day
 #' @export
-process_batch <- function(path_name, file_name, path_out,
+process_batch <- function(path_name, file_name, path_out, path_mailbox,
                           team = "default", n_iter = 300, n_chains = 4,
                           n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, seed=221285){
   print(team)
@@ -101,5 +103,5 @@ process_batch <- function(path_name, file_name, path_out,
   write_results(fit = fit, file_name = file_name,
                 team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
                 #tot_casillas, n_casillas,
-                path_out = path_out)
+                path_out = path_out, path_mailbox = path_mailbox)
 }

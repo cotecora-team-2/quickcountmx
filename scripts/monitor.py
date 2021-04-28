@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --wait_sec 5 --team ortizm --last True
+# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True
 
 from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS, SEED
 import sys, getopt
@@ -31,6 +31,8 @@ def procesar_nombre(filename):
 def main(params):
   if not os.path.exists(params.path_out):
     os.makedirs(params.path_out)
+  if not os.path.exists(params.path_mailbox):
+    os.makedirs(params.path_mailbox)
   print("Observando " + params.data_path + " cada "+ str(params.wait_sec) + " segundos.")
   files_before = [f for f in os.listdir(params.data_path) if f[:7] == "REMESAS"]
   files_before.sort()
@@ -56,7 +58,7 @@ def main(params):
           infile.close()
           print(nrow)
           if nrow > 1:
-              subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"',seed='"+str(SEED)+"')"]) 
+              subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.path_mailbox+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"',seed='"+str(SEED)+"')"]) 
               #subprocess.call(["sed","-i",'s/,,,,,$//g',params.path_results+'/compulsado'+descriptores['id_estado']+descriptores['fecha']+'.csv'])
           else:
             print('numero de casillas = 1')
@@ -73,6 +75,8 @@ if __name__ == "__main__":
                         help="A folder with this name would be created to dump saved models and log files")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
+    parser.add_argument("--path_mailbox", "-pm", type=str,
+                        help="Data path of output in second directory")
     parser.add_argument('--wait_sec', "-s", type=int,
                         help="Wait seconds")
     parser.add_argument('--team', "-t", type=str, default="default",
