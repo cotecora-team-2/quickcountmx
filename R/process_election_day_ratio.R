@@ -61,7 +61,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
                                   stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
-    filter(!is.na(PAN))
+    filter(!is.na(TOTAL))
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
   # do processing ########
