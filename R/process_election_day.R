@@ -63,12 +63,13 @@ process_batch <- function(path_name, file_name, path_out, path_mailbox,
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
   candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2021.csv") %>%
-    filter(ID_ESTADO == as.numeric(estado_str))
+    filter(ID_ESTADO == as.numeric(estado_str)) #%>%
+#    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1) %>%
-#    mutate(ID_ESTADO = iD_ESTADO) %>%
+#    rename(ID_ESTADO = iD_ESTADO) %>% #cambia nombre de columna iD_ESTADO a mayusculas
     mutate(OTROS = CNR + NULOS) %>%
     mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
                                   stringr::str_pad(SECCION, 4, pad = "0"),
