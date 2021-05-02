@@ -30,11 +30,19 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
 
 
-
   readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
                                                EN, R, ".csv"))
   readr::write_csv(tab_candidatos, paste0(path_mailbox, "/", team,
                                           EN, R, ".csv"))
+  row1 <- paste(stringr::str_pad(names(tab_candidatos),7,pad=" "),collapse = " ")
+  row2 <- paste(stringr::str_pad(as.character(tab_candidatos[1,]),7,pad = " "), collapse = " ")
+  row3 <- paste(stringr::str_pad(as.character(tab_candidatos[2,]),7,pad = " "), collapse = " ")
+  row4 <- paste(stringr::str_pad(as.character(tab_candidatos[3,]),7,pad = " "), collapse = " ")
+  logger::log_trace("{logger::grayscale_by_log_level(row1,logger::FATAL)}")
+  logger::log_trace("{logger::grayscale_by_log_level(row2,logger::ERROR)}")
+  logger::log_trace("{logger::grayscale_by_log_level(row3,logger::ERROR)}")
+  logger::log_trace("{logger::grayscale_by_log_level(row4,logger::ERROR)}")
+
   #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
 #                                                 EN, R, ".csv"))
 }
@@ -48,10 +56,13 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #'
 #' @rdname process_batch_election_day
 #' @export
-process_batch <- function(path_name, file_name, path_out, path_mailbox,
-                          team = "default", n_iter = 300, n_chains = 4,
+process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
+                          team = "default", even="0", n_iter = 300, n_chains = 4,
                           n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, seed=221285){
-  print(team)
+  logger::log_appender(logger::appender_file(log_file))
+  logger::log_layout(logger::layout_glue_colors)
+  logger::log_threshold(logger::TRACE)
+  logger::log_info(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
@@ -77,14 +88,51 @@ process_batch <- function(path_name, file_name, path_out, path_mailbox,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
                                   stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
     filter(!is.na(TOTAL))
-  print(paste0("datos: ", path_name))
-  print(paste0("salidas: ", path_out))
+  logger::log_info(paste0("numero de casillas sin NA en TOTAL: ",data_in %>% nrow()))
+  logger::log_info(paste0("datos: ", path_name))
+  logger::log_info(paste0("salidas: ", path_out))
+
+  #check if candidates votes correspond to their alliances sums
+  lista_coaliciones <- candidatos$PARTIDO %>% unique()
+  votacion_larga <- data_in %>%
+    tidyr::pivot_longer(cols = all_of(lista_coaliciones), names_to = "PARTIDO",
+                 values_to = "votos")
+  votacion <- votacion_larga %>%
+    left_join(candidatos) %>%
+    group_by(CLAVE_CASILLA, ID_ESTADO, CANDIDATO) %>%
+    summarise(votos = sum(votos)) %>%
+    tidyr::pivot_wider(names_from = CANDIDATO, values_from = votos)
+
+  rm(votacion_larga)
+  rm(lista_coaliciones)
+  tmp_data_in <- data_in %>%
+    select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos))
+  tmp_data_in <- tmp_data_in[order(data_in$CLAVE_CASILLA),]
+
+  tmp_votacion <- votacion %>%
+    select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos))
+  tmp_votacion <- tmp_votacion[order(votacion$CLAVE_CASILLA),]
+  print(all(tmp_data_in == tmp_votacion))
+  if(!all(tmp_data_in == tmp_votacion)){
+      erroneos <- data.frame(cand_id = which(tmp_data_in != tmp_votacion, arr.ind=TRUE)[,2] %>% as.numeric())
+      erroneos <- erroneos %>% group_by(cand_id) %>% summarise(c = n())
+      erroneos <- erroneos %>%
+                  mutate_at(vars(cand_id), ~ names(tmp_data_in)[.x])
+      print(erroneos)
+      for(ro in 1:nrow(erroneos)) {print(paste0("candidato erroneo: ",erroneos[ro,1]))}
+      for(ro in 1:nrow(erroneos)) {logger::log_error('La suma del candidato {logger::colorize_by_log_level(erroneos[ro,1], logger::ERROR)} esta incorrecta en {logger::colorize_by_log_level(erroneos[ro,2], logger::ERROR)} casillas!')}
+  }
+  rm(votacion)
+  rm(tmp_votacion)
+  rm(tmp_data_in)
+
   # do processing ########
   muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
     mutate(estrato = as.character(estrato))
   data_stratum_tbl <- table_frame %>%
     filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
     mutate(estrato = as.character(estrato))
+  logger::log_info(paste0("numero de casillas despues de union con marco: ", muestra_m %>% nrow()))
 
 #  tot_estratos <- nrow(data_stratum_tbl)
 #  n_estratos <- muestra_m %>% select(estrato) %>% unique() %>% nrow()
@@ -100,6 +148,17 @@ process_batch <- function(path_name, file_name, path_out, path_mailbox,
                          chains = as.numeric(n_chains), seed = as.numeric(seed), part = TRUE)
   )
   print(fit_time)
+  if(even=="0") m<-1
+  else m<-2
+  if(fit_time[3] < 230*m){
+      logger::log_info("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::SUCCESS)}")
+  }
+  else if(fit_time[3] < 290*m){
+    logger::log_warn("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::WARN)}")
+  }
+  else{
+    logger::log_fatal("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::FATAL)}")
+  }
 
   write_results(fit = fit, file_name = file_name,
                 team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
