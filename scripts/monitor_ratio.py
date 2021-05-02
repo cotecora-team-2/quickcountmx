@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --wait_sec 5 --team ortizm --last True
+# python3 scripts/monitor_ratio.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True
 
 import sys, getopt
 import os

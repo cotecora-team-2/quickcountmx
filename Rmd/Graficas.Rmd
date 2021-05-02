@@ -1,0 +1,123 @@
+---
+title: "Graficas de dia de la elección"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo=FALSE,message=FALSE}
+library(tidyverse)
+path_buzon2 <- "/home/rstudio/workspace/cotecora/buzon2/"
+estimaciones_files <- list.files(paste0(path_buzon2,"estimaciones"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
+razon_files <- list.files(paste0(path_buzon2,"razon"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
+multi_files <- estimaciones_files[!grepl("mendoza",estimaciones_files,fixed = TRUE)]
+mendoza_files <- estimaciones_files[grepl("mendoza",estimaciones_files,fixed = TRUE)]
+```
+
+```{r, echo=FALSE,message=FALSE}
+
+get_df <- function(edo_id){
+  get_fdate <- function(x){
+    x <- as.character(x)
+    nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
+  }
+    candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2021.csv") %>%
+        filter(ID_ESTADO == as.numeric(edo_id)) #%>%
+    #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
+    lista_candidatos <- candidatos$CANDIDATO %>% unique()
+    lista_candidatos <- lista_candidatos[!grepl("OTROS", lista_candidatos, fixed = TRUE)]
+    lista_candidatos <- append(lista_candidatos,"PART")
+
+    file_edos <- substr(multi_files, nchar(multi_files) - 11,nchar(multi_files) - 10)
+    multi_df <- multi_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.) %>%
+                                                              mutate_at(vars(EN), ~
+                                                                          as.character(.)) %>%
+                                                              mutate(method="multi"))
+    file_edos <- substr(mendoza_files, nchar(mendoza_files) - 11,nchar(mendoza_files) - 10)
+    mendoza_df <- mendoza_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
+                                                              mutate(method="mendoza"))
+    file_edos <- substr(razon_files, nchar(razon_files) - 11,nchar(razon_files) - 10)
+    razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
+                                                              mutate(PART=as.numeric(""))  %>%
+                                                              mutate(method="razon")
+    df <- do.call("rbind", list(multi_df,mendoza_df,razon_df))
+    df <- df %>%
+    tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
+                 values_to = "porcentaje") %>%
+      rename(fecha = R) %>%
+      mutate_at(vars(fecha), get_fdate) %>%
+      group_by(EQ,EN,fecha) %>%
+      mutate(LMU = dplyr::case_when(
+      LMU == 0 ~ "inf",
+      LMU == 1 ~ "median",
+      LMU == 2 ~ "sup")) %>%
+      tidyr::pivot_wider(names_from = LMU, values_from = porcentaje) 
+
+    df
+}
+
+df6 <- get_df("06")
+df8 <- get_df("08")
+df16 <- get_df("16")
+df18 <- get_df("18")
+df32 <- get_df("32")
+
+```
+
+```{r , echo=TRUE}
+ggplot(df6, aes(fecha,median, color=factor(candidato))) +
+   geom_line(aes(group = candidato)) +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
+  ylim(0,55) +
+  facet_wrap(~method) +
+  xlab("Hora") +
+  ylab("Porcentaje") +
+  labs(subtitle = "Votacion para gobernador de Colima")
+```
+
+```{r , echo=TRUE}
+ggplot(df8, aes(fecha,median, color=factor(candidato))) +
+   geom_line(aes(group = candidato)) +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
+  ylim(0,55) +
+  facet_wrap(~method) +
+  xlab("Hora") +
+  ylab("Porcentaje") +
+  labs(subtitle = "Votacion para gobernador de Chihuahua")
+```
+
+```{r , echo=TRUE}
+ggplot(df16, aes(fecha,median, color=factor(candidato))) +
+   geom_line(aes(group = candidato)) +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
+  ylim(0,55) +
+  facet_wrap(~method) +
+  xlab("Hora") +
+  ylab("Porcentaje") +
+  labs(subtitle = "Votacion para gobernador de Michoacan")
+```
+
+```{r , echo=TRUE}
+ggplot(df18, aes(fecha,median, color=factor(candidato))) +
+   geom_line(aes(group = candidato)) +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
+  ylim(0,55) +
+  facet_wrap(~method) +
+  xlab("Hora") +
+  ylab("Porcentaje") +
+  labs(subtitle = "Votacion para gobernador de Nayarit")
+```
+
+```{r , echo=TRUE}
+ggplot(df32, aes(fecha,median, color=factor(candidato))) +
+   geom_line(aes(group = candidato)) +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
+  ylim(0,55) +
+  facet_wrap(~method) +
+  xlab("Hora") +
+  ylab("Porcentaje") +
+  labs(subtitle = "Votacion para gobernador de Zacatecas")
+```

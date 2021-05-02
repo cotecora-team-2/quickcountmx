@@ -1,15 +1,29 @@
-write_results_ratio <- function(df, file_name, team, #tot_estratos, n_estratos, tot_casillas, n_casillas,
+write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n_estratos, tot_casillas, n_casillas,
                           path_out){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
   tab_candidatos <- df %>%
     dplyr::arrange(desc(prop)) %>% dplyr::select(party,prop,std_error) %>% filter(party != "OTROS") %>%
+    mutate(inf = prop - qt(0.025, n_muestra - 1) * std_error) %>%
+    mutate(sup = prop + qt(0.025, n_muestra - 1) * std_error) %>%
+    select(-std_error) %>%
+    dplyr::mutate(across(where(is.numeric), round, 1)) %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
-    tidyr::gather(key, value, -rowname) %>%
-    tidyr::spread(rowname, value) %>%
-    relocate(c(key), .before = everything())
+    tidyr::gather(LMU, value, -rowname) %>%
+    tidyr::spread(rowname, value) %>% dplyr::mutate(LMU = dplyr::case_when(
+      LMU == "inf" ~ 0,
+      LMU == "prop" ~ 1,
+      LMU == "sup" ~ 2
+    ),
+    LMU = as.integer(LMU),
+    EQ = team,
+    EN = EN,
+    R = R ) %>%
+    relocate(c(EQ,EN,R), .before = everything()) %>%
+    relocate(c(LMU), .after = last_col())
+
 
 #  tab_compulsados <- tab_candidatos %>%
 #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
@@ -85,8 +99,10 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   print(fit_time)
   print(ratios)
 
+  n_muestra_m <- nrow(muestra_m)
+
   write_results_ratio(df = ratios, file_name = file_name,
-                team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
+                team = team, n_muestra = n_muestra_m, #tot_estratos = tot_estratos, n_estratos = n_estratos,
                 #tot_casillas, n_casillas,
                 path_out = path_out)
 }
