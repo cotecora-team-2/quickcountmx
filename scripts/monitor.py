@@ -69,17 +69,20 @@ def main(params):
   files_before.sort()
   if boolarg_to_bool(params.last):
     files_before = files_before[:-1]
+  is_even = boolarg_to_num(params.even)
   while 1:
     files_now = [f for f in os.listdir(params.data_path) if f[:7] == "REMESAS"]
     added = [f for f in files_now if not f in files_before]
     if added:
       print(".")
       added.sort()
+      logging.info('------------------------------------------------------')
+      logging.info("Se agregaron: {}".format(",".join(added)))
       print("Se agregaron: ", ",".join(added))
       # use last one even or not
       if len(added) >=1:
-          if boolarg_to_num(params.even) > 0:
-              added = [a for a in added if ((int(a[-5]) + boolarg_to_num(params.even)) % 2) == 1]
+          if is_even > 0:
+              added = [a for a in added if ((int(a[-5]) + is_even) % 2) == 1]
           added.sort()
       if added:
           added = added[-1:]
