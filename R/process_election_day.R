@@ -87,8 +87,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
                                   stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
-    filter(!is.na(TOTAL))
-  logger::log_info(paste0("numero de casillas sin NA en TOTAL: ",data_in %>% nrow()))
+    filter(TOTAL > 0)
+  logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
 
@@ -132,18 +132,23 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   data_stratum_tbl <- table_frame %>%
     filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
     mutate(estrato = as.character(estrato))
-  logger::log_info(paste0("numero de casillas despues de union con marco: ", muestra_m %>% nrow()))
+  n_muestra_m <- muestra_m %>% nrow()
+  logger::log_info(paste0("numero de casillas despues de union con marco: ", n_muestra_m))
 
 #  tot_estratos <- nrow(data_stratum_tbl)
 #  n_estratos <- muestra_m %>% select(estrato) %>% unique() %>% nrow()
 #  tot_casillas <- table_frame %>% nrow()
 #  n_casillas <- data_in %>% nrow()
 
+  n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
+    filter(ID_ESTADO == as.numeric(estado_str))
+  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n > 1.0, 1.0, n_muestra_m/n_t_muestra$n)
+
   # run model ###################
   fit_time <- system.time(
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                           sampling_frame = table_frame,
-                          parties = all_of(lista_candidatos),
+                          parties = all_of(lista_candidatos), prop_obs = prop_obs,
                           covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
                          chains = as.numeric(n_chains), seed = as.numeric(seed), part = TRUE)
   )

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor_ratio.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True
+# python3 scripts/monitor_ratio.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100
 
 import sys, getopt
 import os
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                         help="A folder with this name would be created to dump saved models and log files")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
-    parser.add_argument('--b', "-b", type=int, default=50,
+    parser.add_argument('--b', "-b", type=int, default=100,
                         help="Number of bootstrap replicates used to compute standard errors")
     parser.add_argument('--wait_sec', "-s", type=int,
                         help="Wait seconds")
