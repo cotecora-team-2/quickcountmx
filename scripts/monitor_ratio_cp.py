@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor_ratio.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100
+# python3 scripts/monitor_ratio_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100 --last_file _last_ratio_zac
+# python3 scripts/monitor_ratio_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100
 
 import sys, getopt
 import os
@@ -32,6 +33,9 @@ def main(params):
   keep_trying = True
   if not os.path.exists(params.path_out):
     os.makedirs(params.path_out)
+  if not os.path.exists(params.last_file):
+    with open(params.last_file, "w") as myfile:
+      myfile.write('0,\n')
   print("Observando " + params.data_path + " cada "+ str(params.wait_sec) + " segundos.")
   files_before = [f for f in os.listdir(params.data_path) if f[:7] == "REMESAS"]
   files_before.sort()
@@ -59,16 +63,16 @@ def main(params):
           while keep_trying:
               last_fn_out = ""
               try:
-                  with open("_last_ratio", 'r') as infile:
+                  with open(params.last_file, 'r') as infile:
                       last_nrow_file = infile.readlines()
                   last_nrow = int(last_nrow_file[-1].split(',')[0])
                   last_fn_out = last_nrow_file[-1].strip().split(',')[1]
                   fn_out = 'razon' + descriptores['id_estado'] + descriptores['fecha'] + '.csv'
                   if nrow > last_nrow:
-                      with open("_last_ratio", "a") as myfile:
+                      with open(params.last_file, "a") as myfile:
                           myfile.write('{},{}\n'.format(nrow,fn_out))
                   else:
-                      with open("_last_ratio", "a") as myfile:
+                      with open(params.last_file, "a") as myfile:
                           myfile.write('{},{}\n'.format(last_nrow,fn_out))
                   keep_trying = False
               except Exception as e:
@@ -101,7 +105,7 @@ if __name__ == "__main__":
 
     # Experiment setup params
     parser.add_argument("--data_path", "-dp", type=str, default="default1",
-                        help="A folder with this name would be created to dump saved models and log files")
+                        help="Data path of input")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
     parser.add_argument('--b', "-b", type=int, default=100,
@@ -112,6 +116,8 @@ if __name__ == "__main__":
                         help="Team name")
     parser.add_argument('--last', '-l', type=bool, default=False,
                         help='whether it is the last one')
+    parser.add_argument('--last_file', "-la", type=str, default="_last_ratio",
+                        help="file where nrow and output filename are stored to be checked internally")
 
     params = parser.parse_args()
 

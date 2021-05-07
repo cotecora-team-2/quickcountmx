@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file chi.log
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --log_file chi.log
-# python3 scripts/monitor.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True 
+# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file zac.log --last_file _last_zac
+# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file zac.log
+# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True
+# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --log_file chi.log
+# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True 
 
 from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS, SEED
 import sys, getopt
@@ -66,6 +67,9 @@ def main(params):
     os.makedirs(params.path_out)
   if not os.path.exists(params.path_mailbox):
     os.makedirs(params.path_mailbox)
+  if not os.path.exists(params.last_file):
+    with open(params.last_file, "w") as myfile:
+      myfile.write('0,\n')
   logging.info("Observando " + params.data_path + " cada "+ str(params.wait_sec) + " segundos.")
   files_before = [f for f in os.listdir(params.data_path) if f[:7] == "REMESAS"]
   files_before.sort()
@@ -101,16 +105,16 @@ def main(params):
               while keep_trying:
                   last_fn_out = ""
                   try:
-                      with open("_last", 'r') as infile:
+                      with open(params.last_file, 'r') as infile:
                           last_nrow_file = infile.readlines()
                       last_nrow = int(last_nrow_file[-1].split(',')[0])
                       last_fn_out = last_nrow_file[-1].strip().split(',')[1]
                       fn_out = params.team + descriptores['id_estado'] + descriptores['fecha'] + '.csv'
                       if nrow > last_nrow:
-                          with open("_last", "a") as myfile:
+                          with open(params.last_file, "a") as myfile:
                               myfile.write('{},{}\n'.format(nrow,fn_out))
                       else:
-                          with open("_last", "a") as myfile:
+                          with open(params.last_file, "a") as myfile:
                               myfile.write('{},{}\n'.format(last_nrow,fn_out))
                       keep_trying = False
                   except Exception as e:
@@ -151,7 +155,7 @@ if __name__ == "__main__":
 
     # Experiment setup params
     parser.add_argument("--data_path", "-dp", type=str, default="default1",
-                        help="A folder with this name would be created to dump saved models and log files")
+                        help="Data path of input")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
     parser.add_argument("--path_mailbox", "-pm", type=str,
@@ -166,6 +170,8 @@ if __name__ == "__main__":
                         help='whether it estimates even times')
     parser.add_argument('--log_file', '-lf', type=str, default="log",
                         help='log filename')
+    parser.add_argument('--last_file', '-la', type=str, default="_last",
+                        help="file where nrow and output filename are stored to be checked internally")
 
     params = parser.parse_args()
 
