@@ -7,14 +7,28 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r,echo=FALSE,message=FALSE}
+reescalar <- TRUE
+is_median_ylim <- TRUE
+```
 
 ```{r, echo=FALSE,message=FALSE}
 library(tidyverse)
-path_buzon2 <- "/home/rstudio/workspace/cotecora/buzon2/"
+reescalar <- TRUE
+is_median_ylim <- FALSE
+get_ylim <- function(df,is_median) {
+  if(is_median)
+    max((df %>% group_by(candidato) %>% summarise(m = median(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
+  else
+    max((df %>% group_by(candidato) %>% summarise(m = max(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
+}
+
+path_buzon2 <- "/home/rstudio/workspace/buzon2/"
 estimaciones_files <- list.files(paste0(path_buzon2,"estimaciones"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
 razon_files <- list.files(paste0(path_buzon2,"razon"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-multi_files <- estimaciones_files[!grepl("mendoza",estimaciones_files,fixed = TRUE)]
+multi_files <- estimaciones_files[grepl("ortizm|anzarut",estimaciones_files,fixed = FALSE)]
 mendoza_files <- estimaciones_files[grepl("mendoza",estimaciones_files,fixed = TRUE)]
+compulsado_files <- estimaciones_files[grepl("compulsado",estimaciones_files,fixed = TRUE)]
 ```
 
 ```{r, echo=FALSE,message=FALSE}
@@ -43,13 +57,19 @@ get_df <- function(edo_id){
     razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
                                                               mutate(PART=as.numeric(""))  %>%
                                                               mutate(method="razon")
-    df <- do.call("rbind", list(multi_df,mendoza_df,razon_df))
+    file_edos <- substr(compulsado_files, nchar(compulsado_files) - 11,nchar(compulsado_files) - 10)
+    compulsado_df <- compulsado_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
+                                                              mutate(method="compulsado") %>%
+                                                       select(-ESTRATOS,-EST_REC,-TOT_CAS,-CAS_REC,-PORCENTAJE))
+    df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
     df <- df %>%
     tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
                  values_to = "porcentaje") %>%
       rename(fecha = R) %>%
       mutate_at(vars(fecha), get_fdate) %>%
-      group_by(EQ,EN,fecha) %>%
+      select(-EQ) %>%
+      unique() %>%
+      group_by(EN,fecha) %>%
       mutate(LMU = dplyr::case_when(
       LMU == 0 ~ "inf",
       LMU == 1 ~ "median",
@@ -67,57 +87,67 @@ df32 <- get_df("32")
 
 ```
 
-```{r , echo=TRUE}
+```{r , echo=TRUE,fig.width=10}
+limite <- ifelse(reescalar, get_ylim(df6,is_median_ylim), 100)
 ggplot(df6, aes(fecha,median, color=factor(candidato))) +
    geom_line(aes(group = candidato)) +
   geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,55) +
-  facet_wrap(~method) +
+  ylim(0,limite) +
+  facet_wrap(~method, nrow=1) +
   xlab("Hora") +
   ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Colima")
+  labs(subtitle = "Votacion para gobernador de Colima") +
+  theme(legend.position="bottom")
 ```
 
-```{r , echo=TRUE}
+```{r , echo=TRUE,fig.width=10}
+limite <- ifelse(reescalar, get_ylim(df8,is_median_ylim), 100)
 ggplot(df8, aes(fecha,median, color=factor(candidato))) +
    geom_line(aes(group = candidato)) +
   geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,55) +
-  facet_wrap(~method) +
+  ylim(0,limite) +
+  facet_wrap(~method, nrow=1) +
   xlab("Hora") +
   ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Chihuahua")
+  labs(subtitle = "Votacion para gobernador de Chihuahua") +
+  theme(legend.position="bottom")
 ```
 
-```{r , echo=TRUE}
+```{r , echo=TRUE,fig.width=10}
+limite <- ifelse(reescalar, get_ylim(df16,is_median_ylim), 100)
 ggplot(df16, aes(fecha,median, color=factor(candidato))) +
    geom_line(aes(group = candidato)) +
   geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,55) +
-  facet_wrap(~method) +
+  ylim(0,limite) +
+  facet_wrap(~method, nrow=1) +
   xlab("Hora") +
   ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Michoacan")
+  labs(subtitle = "Votacion para gobernador de Michoacan") +
+  theme(legend.position="bottom")
 ```
 
-```{r , echo=TRUE}
+```{r , echo=TRUE,fig.width=10}
+limite <- ifelse(reescalar, get_ylim(df18,is_median_ylim), 100)
 ggplot(df18, aes(fecha,median, color=factor(candidato))) +
    geom_line(aes(group = candidato)) +
   geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,55) +
-  facet_wrap(~method) +
+  ylim(0,limite) +
+  facet_wrap(~method, nrow=1) +
   xlab("Hora") +
   ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Nayarit")
+  labs(subtitle = "Votacion para gobernador de Nayarit") +
+  theme(legend.position="bottom")
 ```
 
-```{r , echo=TRUE}
+```{r , echo=TRUE,fig.width=10}
+limite <- ifelse(reescalar, get_ylim(df32,is_median_ylim), 100)
 ggplot(df32, aes(fecha,median, color=factor(candidato))) +
    geom_line(aes(group = candidato)) +
   geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,55) +
-  facet_wrap(~method) +
+  ylim(0,limite) +
+  facet_wrap(~method, nrow=1) +
   xlab("Hora") +
   ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Zacatecas")
+  labs(subtitle = "Votacion para gobernador de Zacatecas") +
+  theme(legend.position="bottom")
 ```

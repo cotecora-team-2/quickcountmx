@@ -57,7 +57,7 @@ def main(params):
           if nrow > 1:
               subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
           else:
-            print('numero de casillas = 1')
+            print('no se estima con numero de casillas < 2')
     else:
       print('.', end = '', flush = True)
     files_before = files_now
