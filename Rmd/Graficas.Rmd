@@ -9,13 +9,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r,echo=FALSE,message=FALSE}
 reescalar <- TRUE
-is_median_ylim <- TRUE
+is_median_ylim <- FALSE
 ```
 
 ```{r, echo=FALSE,message=FALSE}
 library(tidyverse)
-reescalar <- TRUE
-is_median_ylim <- FALSE
 get_ylim <- function(df,is_median) {
   if(is_median)
     max((df %>% group_by(candidato) %>% summarise(m = median(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
