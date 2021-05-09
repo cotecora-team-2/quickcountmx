@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor_ratio_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100 --last_file _last_ratio_zac
-# python3 scripts/monitor_ratio_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100
+# python3 scripts/monitor_ratio_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100 --last_file _last_ratio_zac
+# python3 scripts/monitor_ratio_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100
 
 import sys, getopt
 import os

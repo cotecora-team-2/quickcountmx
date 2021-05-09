@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file zac.log --last_file _last_zac
-# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file zac.log
-# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True
-# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --log_file chi.log
-# python3 scripts/monitor_cp.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True 
+# python3 scripts/monitor_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file zac.log --last_file _last_zac
+# python3 scripts/monitor_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True --log_file zac.log
+# python3 scripts/monitor_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --even True
+# python3 scripts/monitor_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True --log_file chi.log
+# python3 scripts/monitor_cp_hash.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --wait_sec 5 --team ortizm --last True 
 
 from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS, SEED
 import sys, getopt
