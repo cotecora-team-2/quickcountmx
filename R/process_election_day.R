@@ -142,7 +142,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
 
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
     filter(ID_ESTADO == as.numeric(estado_str))
-  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n > 1.0, 1.0, n_muestra_m/n_t_muestra$n)
+  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
 
   # run model ###################
   fit_time <- system.time(

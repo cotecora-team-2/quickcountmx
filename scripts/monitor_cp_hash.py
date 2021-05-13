@@ -159,8 +159,17 @@ def main(params):
                                   last_full_out = os.path.join(params.path_out, last_fn_out)
                                   full_out = os.path.join(params.path_out, fn_out)
                                   full_mailbox = os.path.join(params.path_mailbox, fn_out)
-                                  copy(last_full_out,full_out)
-                                  copy(last_full_out,full_mailbox)
+                                  with open(last_full_out, 'r') as infile:
+                                      last_results_list = infile.readlines()
+                                  with open(full_out, "w") as myfile:
+                                      for line in last_results_list:
+                                          new_line = line.split(',')
+                                          if new_line[2] == 'R':
+                                              myfile.write(line)
+                                          else:
+                                              new_line[2] = descriptores['fecha']
+                                              myfile.write(','.join(new_line))
+                                  copy(full_out,full_mailbox)
                                   keep_trying = False
                               except Exception as e:
                                   time.sleep(int(params.wait_sec))
