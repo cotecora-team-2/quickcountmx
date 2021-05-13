@@ -32,49 +32,59 @@ compulsado_files <- estimaciones_files[grepl("compulsado",estimaciones_files,fix
 ```{r, echo=FALSE,message=FALSE}
 
 get_df <- function(edo_id){
-  get_fdate <- function(x){
-    x <- as.character(x)
-    nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
-  }
-    candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2021.csv") %>%
-        filter(ID_ESTADO == as.numeric(edo_id)) #%>%
+    out <- tryCatch(
+        {
+          get_fdate <- function(x){
+            x <- as.character(x)
+            nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
+           }
+          candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2021.csv") %>%
+            filter(ID_ESTADO == as.numeric(edo_id)) #%>%
     #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
-    lista_candidatos <- candidatos$CANDIDATO %>% unique()
-    lista_candidatos <- lista_candidatos[!grepl("OTROS", lista_candidatos, fixed = TRUE)]
-    lista_candidatos <- append(lista_candidatos,"PART")
+          lista_candidatos <- candidatos$CANDIDATO %>% unique()
+          lista_candidatos <- lista_candidatos[!grepl("OTROS", lista_candidatos, fixed = TRUE)]
+          lista_candidatos <- append(lista_candidatos,"PART")
 
-    file_edos <- substr(multi_files, nchar(multi_files) - 11,nchar(multi_files) - 10)
-    multi_df <- multi_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.) %>%
+          file_edos <- substr(multi_files, nchar(multi_files) - 11,nchar(multi_files) - 10)
+          multi_df <- multi_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.) %>%
                                                               mutate_at(vars(EN), ~
                                                                           as.character(.)) %>%
                                                               mutate(method="multi"))
-    file_edos <- substr(mendoza_files, nchar(mendoza_files) - 11,nchar(mendoza_files) - 10)
-    mendoza_df <- mendoza_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
+          file_edos <- substr(mendoza_files, nchar(mendoza_files) - 11,nchar(mendoza_files) - 10)
+          mendoza_df <- mendoza_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
                                                               mutate(method="mendoza"))
-    file_edos <- substr(razon_files, nchar(razon_files) - 11,nchar(razon_files) - 10)
-    razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
+          file_edos <- substr(razon_files, nchar(razon_files) - 11,nchar(razon_files) - 10)
+          razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
                                                               mutate(PART=as.numeric(""))  %>%
                                                               mutate(method="razon")
-    file_edos <- substr(compulsado_files, nchar(compulsado_files) - 11,nchar(compulsado_files) - 10)
-    compulsado_df <- compulsado_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
+          file_edos <- substr(compulsado_files, nchar(compulsado_files) - 11,nchar(compulsado_files) - 10)
+          compulsado_df <- compulsado_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
                                                               mutate(method="compulsado") %>%
                                                        select(-ESTRATOS,-EST_REC,-TOT_CAS,-CAS_REC,-PORCENTAJE))
-    df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
-    df <- df %>%
-    tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
+          df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
+          df <- df %>%
+            tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
                  values_to = "porcentaje") %>%
-      rename(fecha = R) %>%
-      mutate_at(vars(fecha), get_fdate) %>%
-      select(-EQ) %>%
-      unique() %>%
-      group_by(EN,fecha) %>%
-      mutate(LMU = dplyr::case_when(
-      LMU == 0 ~ "inf",
-      LMU == 1 ~ "median",
-      LMU == 2 ~ "sup")) %>%
-      tidyr::pivot_wider(names_from = LMU, values_from = porcentaje) 
+            rename(fecha = R) %>%
+            mutate_at(vars(fecha), get_fdate) %>%
+            select(-EQ) %>%
+            unique() %>%
+            group_by(EN,fecha) %>%
+            mutate(LMU = dplyr::case_when(
+            LMU == 0 ~ "inf",
+            LMU == 1 ~ "median",
+            LMU == 2 ~ "sup")) %>%
+            tidyr::pivot_wider(names_from = LMU, values_from = porcentaje) 
 
-    df
+          df
+        },
+        error=function(cond) {
+            message(paste("No hay datos para",edo_id))
+            message(cond)
+            return(NA)
+        }
+    )    
+    return(out)
 }
 
 df6 <- get_df("06")
@@ -85,67 +95,35 @@ df32 <- get_df("32")
 
 ```
 
-```{r , echo=TRUE,fig.width=10}
-limite <- ifelse(reescalar, get_ylim(df6,is_median_ylim), 100)
-ggplot(df6, aes(fecha,median, color=factor(candidato))) +
-   geom_line(aes(group = candidato)) +
-  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,limite) +
-  facet_wrap(~method, nrow=1) +
-  xlab("Hora") +
-  ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Colima") +
-  theme(legend.position="bottom")
-```
 
-```{r , echo=TRUE,fig.width=10}
-limite <- ifelse(reescalar, get_ylim(df8,is_median_ylim), 100)
-ggplot(df8, aes(fecha,median, color=factor(candidato))) +
-   geom_line(aes(group = candidato)) +
-  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,limite) +
-  facet_wrap(~method, nrow=1) +
-  xlab("Hora") +
-  ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Chihuahua") +
-  theme(legend.position="bottom")
-```
+```{r, echo=TRUE,fig.width=10}
+plotDF_edo <- function(df,edo_str) {
+    out <- tryCatch(
+        {
+          limite <- ifelse(reescalar, get_ylim(df,is_median_ylim), 100)
+          ggplot(df, aes(fecha,median, color=factor(candidato))) +
+            geom_line(aes(group = candidato)) +
+            geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
+            ylim(0,limite) +
+            facet_wrap(~method, nrow=1) +
+            xlab("Hora") +
+            ylab("Porcentaje") +
+            labs(subtitle = paste("Votacion para gobernador de",edo_str)) +
+            theme(legend.position="bottom")
 
-```{r , echo=TRUE,fig.width=10}
-limite <- ifelse(reescalar, get_ylim(df16,is_median_ylim), 100)
-ggplot(df16, aes(fecha,median, color=factor(candidato))) +
-   geom_line(aes(group = candidato)) +
-  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,limite) +
-  facet_wrap(~method, nrow=1) +
-  xlab("Hora") +
-  ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Michoacan") +
-  theme(legend.position="bottom")
-```
+        },
+        error=function(cond) {
+            message(paste("No hay datos para",edo_str))
+            message(cond)
+            return(NA)
+        }
+    )    
+    return(out)
+}
 
-```{r , echo=TRUE,fig.width=10}
-limite <- ifelse(reescalar, get_ylim(df18,is_median_ylim), 100)
-ggplot(df18, aes(fecha,median, color=factor(candidato))) +
-   geom_line(aes(group = candidato)) +
-  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,limite) +
-  facet_wrap(~method, nrow=1) +
-  xlab("Hora") +
-  ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Nayarit") +
-  theme(legend.position="bottom")
-```
-
-```{r , echo=TRUE,fig.width=10}
-limite <- ifelse(reescalar, get_ylim(df32,is_median_ylim), 100)
-ggplot(df32, aes(fecha,median, color=factor(candidato))) +
-   geom_line(aes(group = candidato)) +
-  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-  ylim(0,limite) +
-  facet_wrap(~method, nrow=1) +
-  xlab("Hora") +
-  ylab("Porcentaje") +
-  labs(subtitle = "Votacion para gobernador de Zacatecas") +
-  theme(legend.position="bottom")
+plotDF_edo(df6,"Colima")
+plotDF_edo(df8,"Chihuahua")
+plotDF_edo(df16,"Michoacan")
+plotDF_edo(df18,"Nayarit")
+plotDF_edo(df32,"Zacatecas")
 ```
