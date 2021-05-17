@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 # usage:
+# python3 scripts/process_batch.py --abs_filename /home/rstudio/workspace/cotecora/unicom/cortes/zac/REMESAS0232291840.txt --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --team ortizm --log_file zac.log --vars_file _vars
 # python3 scripts/process_batch.py --abs_filename /home/rstudio/workspace/cotecora/unicom/cortes/zac/REMESAS0232291840.txt --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --team ortizm --log_file zac.log
+# python3 scripts/process_batch.py --abs_filename /home/rstudio/workspace/cotecora/unicom/cortes/zac/REMESAS0232291840.txt --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --team ortizm --vars_file _vars
 # python3 scripts/process_batch.py --abs_filename /home/rstudio/workspace/cotecora/unicom/cortes/zac/REMESAS0232291840.txt --path_out /home/rstudio/workspace/cotecora/mancera/zac --path_mailbox /home/rstudio/workspace/cotecora/buzon2/estimaciones/zac --team ortizm
 
-from settings import NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS, SEED
+from settings import Init_vars
 import sys, getopt
 import os
 import logging
@@ -42,8 +44,9 @@ def main(params):
   logging.info("Estimando " + params.abs_filename)
   filename = os.path.basename(params.abs_filename)
   descriptores = procesar_nombre(filename)
+  init_info = Init_vars(descriptores['id_estado'],params.vars_file,logging) # './_vars'
   logging.info(descriptores)
-  logging.info("num_iter:{}, num_warmup:{}, adapt_delta:{}, max_treedepth:{}, num_chains:{}".format(NUM_ITER, NUM_WARMUP, ADAPT_DELTA, MAX_TREEDEPTH, NUM_CHAINS))
+  logging.info(init_info.INIT_INFO)
   if(descriptores["tipo"] == "REMESAS"):
     infile = open(params.abs_filename, 'r')
     nrow = int(infile.readline())
@@ -52,7 +55,7 @@ def main(params):
     logging.info('*** Remesa: {}'.format(filename))
     logging.info("numero de casillas: {}".format(nrow))
     if nrow > 1:
-        subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +params.abs_filename+"','"+descriptores['nombre']+"','"+params.log_file+"','"+params.path_out+"','"+params.path_mailbox+"','"+params.team+"',n_chains='"+str(NUM_CHAINS)+"',n_iter='"+str(NUM_ITER)+"',n_warmup='"+str(NUM_WARMUP)+"',adapt_delta='"+str(ADAPT_DELTA)+"',max_treedepth='"+str(MAX_TREEDEPTH)+"',seed='"+str(SEED)+"')"]) 
+        subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +params.abs_filename+"','"+descriptores['nombre']+"','"+params.log_file+"','"+params.path_out+"','"+params.path_mailbox+"','"+params.team+"',n_chains='"+str(init_info.INIT_INFO['NUM_CHAINS'])+"',n_iter='"+str(init_info.INIT_INFO['NUM_ITER'])+"',n_warmup='"+str(init_info.INIT_INFO['NUM_WARMUP'])+"',adapt_delta='"+str(init_info.INIT_INFO['ADAPT_DELTA'])+"',max_treedepth='"+str(init_info.INIT_INFO['MAX_TREEDEPTH'])+"',seed='"+str(init_info.INIT_INFO['SEED'])+"')"]) 
     else:
         logging.info('no se estima con numero de casillas < 2')
 
@@ -70,6 +73,8 @@ if __name__ == "__main__":
                         help="Team name")
     parser.add_argument('--log_file', '-lf', type=str, default="log",
                         help='log filename')
+    parser.add_argument('--vars_file', '-vf', type=str, default="_vars",
+                        help='vars filename')
 
     params = parser.parse_args()
 

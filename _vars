@@ -1,6 +1,18 @@
+[default]
+
 num_iter=300
 num_warmup=200
 adapt_delta=0.80
 max_treedepth=10
 num_chains=4
 seed=221285
+
+[06] # Colima
+
+num_iter=200
+
+
+[32] # Zacatecas
+
+num_iter=100
+seed=1234
