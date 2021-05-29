@@ -21,7 +21,7 @@ get_ylim <- function(df,is_median) {
     max((df %>% group_by(candidato) %>% summarise(m = max(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
 }
 
-path_buzon2 <- "/home/rstudio/workspace/buzon2/"
+path_buzon2 <- "/home/rstudio/workspace/cotecora_s14/buzon2/"
 estimaciones_files <- list.files(paste0(path_buzon2,"estimaciones"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
 razon_files <- list.files(paste0(path_buzon2,"razon"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
 pctpropobs_files <- list.files(paste0(path_buzon2,"pctpropobs"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
@@ -67,7 +67,7 @@ get_df <- function(edo_id){
           df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
           df <- df %>%
             ungroup() %>%
-            left_join(pctpropobs_df,by=c("EN","R")) %>%
+            left_join(pctpropobs_df, by=c("EN","R")) %>%
             tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
                  values_to = "porcentaje") %>%
             rename(fecha = R) %>%
@@ -107,11 +107,10 @@ plotDF_edo <- function(df,edo_str) {
         {
           limite <- ifelse(reescalar, get_ylim(df,is_median_ylim), 100)
           ann_text<-data.frame(fecha=df$fecha,
-                               median=rep(limite ,nrow(df)),
+                               y=rep(limite ,nrow(df)),
                                candidato=df$candidato,
-                               label=format(df$pctpropobs,digits=2),
-                               index=seq(1,nrow(df)))
-          ann_text <- ann_text %>% mutate(label=ifelse(as.numeric(substr(as.character(fecha),15,16)) %% 15, "",as.character(label))) %>% mutate(label=ifelse(label=='NA','',label))
+                               label=substr(as.character(signif(df$pctpropobs,digits=2)),1,3))
+          ann_text <- ann_text %>% mutate(label=ifelse(as.numeric(substr(as.character(fecha),15,16)) %% 15, "",label)) %>% mutate(label=ifelse(label=="NA","",label))
           ggplot(df, aes(fecha,median, color=factor(candidato))) +
             geom_line(aes(group = candidato)) +
             geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
@@ -121,7 +120,7 @@ plotDF_edo <- function(df,edo_str) {
             ylab("Porcentaje") +
             labs(subtitle = paste("Votacion para gobernador de",edo_str)) +
             theme(legend.position="bottom") +
-            geom_text(data = ann_text,aes(x=fecha,y=median,label=label), size = 3, alpha = 0.1, inherit.aes = FALSE)
+            geom_text(data = ann_text,aes(x=fecha,y=y,label=label), size = 3, alpha = 0.1, inherit.aes = FALSE)
         },
         error=function(cond) {
             message(paste("No hay datos para",edo_str))

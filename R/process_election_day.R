@@ -22,8 +22,8 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
     relocate(c(EQ,EN,R), .before = everything()) %>%
     relocate(c(PART,LMU), .after = last_col())
 
-  prop_obs_str <- as.character(format(prop_obs,digits=3))
-  tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(prop_obs*100))
+  prop_obs_str <- format(prop_obs,digits=3)
+  tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(as.numeric(prop_obs_str)*100))
 #  tab_compulsados <- tab_candidatos %>%
 #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
 #           EST_REC = ifelse(LMU == 0,n_estratos,""),
