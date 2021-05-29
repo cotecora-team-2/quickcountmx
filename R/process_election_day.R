@@ -1,5 +1,5 @@
 write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_casillas, n_casillas,
-                          path_out, path_mailbox){
+                          path_out, path_mailbox, prop_obs){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -22,6 +22,8 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
     relocate(c(EQ,EN,R), .before = everything()) %>%
     relocate(c(PART,LMU), .after = last_col())
 
+  prop_obs_str <- as.character(format(prop_obs,digits=3))
+  tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(prop_obs*100))
 #  tab_compulsados <- tab_candidatos %>%
 #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
 #           EST_REC = ifelse(LMU == 0,n_estratos,""),
@@ -29,15 +31,22 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #           CAS_REC = ifelse(LMU == 0,n_casillas,""),
 #           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
 
-
   readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
                                                EN, R, ".csv"))
   readr::write_csv(tab_candidatos, paste0(path_mailbox, "/", team,
                                           EN, R, ".csv"))
+  p <- stringr::str_split(path_mailbox, "/", simplify = TRUE)
+  l <- length(p)-2
+  npath_mailbox <- paste(p[1:l],collapse='/')
+
+  readr::write_csv(tab_pctpropobs, paste0(npath_mailbox, "/pctpropobs/", "pctpropobs",EN,".csv"),
+             append = TRUE, col_names = FALSE)
+
   row1 <- paste(stringr::str_pad(names(tab_candidatos),7,pad=" "),collapse = " ")
   row2 <- paste(stringr::str_pad(as.character(tab_candidatos[1,]),7,pad = " "), collapse = " ")
   row3 <- paste(stringr::str_pad(as.character(tab_candidatos[2,]),7,pad = " "), collapse = " ")
   row4 <- paste(stringr::str_pad(as.character(tab_candidatos[3,]),7,pad = " "), collapse = " ")
+  logger::log_trace("prop_obs: {logger::colorize_by_log_level(prop_obs_str,logger::SUCCESS)}")
   logger::log_trace("{logger::grayscale_by_log_level(row1,logger::FATAL)}")
   logger::log_trace("{logger::grayscale_by_log_level(row2,logger::ERROR)}")
   logger::log_trace("{logger::grayscale_by_log_level(row3,logger::ERROR)}")
@@ -168,5 +177,5 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   write_results(fit = fit, file_name = file_name,
                 team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
                 #tot_casillas, n_casillas,
-                path_out = path_out, path_mailbox = path_mailbox)
+                path_out = path_out, path_mailbox = path_mailbox, prop_obs = prop_obs)
 }

@@ -79,6 +79,9 @@ def main(params):
     os.makedirs(params.path_out)
   if not os.path.exists(params.path_mailbox):
     os.makedirs(params.path_mailbox)
+  npath_mailbox = '/'.join(params.path_mailbox.split('/')[:-2]) + '/pctpropobs'
+  if not os.path.exists(npath_mailbox):
+    os.makedirs(npath_mailbox)
   if not os.path.exists(params.last_file):
     with open(params.last_file, "w") as myfile:
       myfile.write('0,,\n')
@@ -115,6 +118,7 @@ def main(params):
               nrow = int(infile.readline().strip())
               infile.close()
               keep_trying = True
+              invalid = False
               while keep_trying:
                   last_fn_out = ""
                   try:
@@ -149,7 +153,7 @@ def main(params):
                   if nrow > 1:
                       if invalid:
                           logging.info("Remesa {} no valida!".format(full_path))
-                          raise StopIteration
+                          raise ValueError("Remesa {} no valida!".format(full_path))
                       if  get_hash(full_path) != last_hash:
                           subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.log_file+"','"+params.path_out+"','"+params.path_mailbox+"','"+params.team+"','"+params.even+"',n_chains='"+str(init_info.INIT_INFO['NUM_CHAINS'])+"',n_iter='"+str(init_info.INIT_INFO['NUM_ITER'])+"',n_warmup='"+str(init_info.INIT_INFO['NUM_WARMUP'])+"',adapt_delta='"+str(init_info.INIT_INFO['ADAPT_DELTA'])+"',max_treedepth='"+str(init_info.INIT_INFO['MAX_TREEDEPTH'])+"',seed='"+str(init_info.INIT_INFO['SEED'])+"')"]) 
                           #subprocess.call(["sed","-i",'s/,,,,,$//g',params.path_results+'/compulsado'+descriptores['id_estado']+descriptores['fecha']+'.csv'])
@@ -178,7 +182,7 @@ def main(params):
                           logging.info("Se copio {} como {}".format(last_fn_out,fn_out))
                   else:
                     logging.info('no se estima con numero de casillas < 2')
-              except StopIteration:
+              except Exception as e:
                 pass
       else:
         print('.', end = '', flush = True)

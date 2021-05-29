@@ -64,6 +64,9 @@ def main(params):
     os.makedirs(params.path_out)
   if not os.path.exists(params.path_mailbox):
     os.makedirs(params.path_mailbox)
+  npath_mailbox = '/'.join(params.path_mailbox.split('/')[:-2]) + '/pctpropobs'
+  if not os.path.exists(npath_mailbox):
+    os.makedirs(npath_mailbox)
   logging.info("Observando " + params.data_path + " cada "+ str(params.wait_sec) + " segundos.")
   files_before = [f for f in os.listdir(params.data_path) if f[:7] == "REMESAS"]
   files_before.sort()

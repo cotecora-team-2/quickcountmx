@@ -73,6 +73,7 @@ def main(params):
           nrow = int(infile.readline().strip())
           infile.close()
           keep_trying = True
+          invalid = False
           while keep_trying:
               last_fn_out = ""
               try:
@@ -104,7 +105,7 @@ def main(params):
               if nrow > 1:
                   if invalid:
                       print("Remesa {} no valida!".format(full_path))
-                      raise StopIteration
+                      raise ValueError("Remesa {} no valida!".format(full_path))
                   if  get_hash(full_path) != last_hash:
                       subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
                   else:
@@ -130,7 +131,7 @@ def main(params):
                       print("Se copio {} como {}".format(last_fn_out,fn_out))
               else:
                 print('no se estima con numero de casillas < 2')
-          except StopIteration:
+          except Exception as e:
             pass
     else:
       print('.', end = '', flush = True)

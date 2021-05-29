@@ -24,6 +24,7 @@ get_ylim <- function(df,is_median) {
 path_buzon2 <- "/home/rstudio/workspace/buzon2/"
 estimaciones_files <- list.files(paste0(path_buzon2,"estimaciones"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
 razon_files <- list.files(paste0(path_buzon2,"razon"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
+pctpropobs_files <- list.files(paste0(path_buzon2,"pctpropobs"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
 multi_files <- estimaciones_files[grepl("ortizm|anzarut",estimaciones_files,fixed = FALSE)]
 mendoza_files <- estimaciones_files[grepl("mendoza",estimaciones_files,fixed = TRUE)]
 compulsado_files <- estimaciones_files[grepl("compulsado",estimaciones_files,fixed = TRUE)]
@@ -57,19 +58,23 @@ get_df <- function(edo_id){
           razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
                                                               mutate(PART=as.numeric(""))  %>%
                                                               mutate(method="razon")
+          file_edos <- substr(pctpropobs_files, nchar(pctpropobs_files) - 5,nchar(pctpropobs_files) - 4)
+          pctpropobs_df <- pctpropobs_files[file_edos == edo_id] %>% map_df(., ~ read_csv(., col_names = c("EN","R","pctpropobs"),col_types = "cdd")) 
           file_edos <- substr(compulsado_files, nchar(compulsado_files) - 11,nchar(compulsado_files) - 10)
           compulsado_df <- compulsado_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
                                                               mutate(method="compulsado") %>%
-                                                       select(-ESTRATOS,-EST_REC,-TOT_CAS,-CAS_REC,-PORCENTAJE))
+                                                                select(-ESTRATOS,-EST_REC,-TOT_CAS,-CAS_REC,-PORCENTAJE))
           df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
           df <- df %>%
+            ungroup() %>%
+            left_join(pctpropobs_df,by=c("EN","R")) %>%
             tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
                  values_to = "porcentaje") %>%
             rename(fecha = R) %>%
             mutate_at(vars(fecha), get_fdate) %>%
             select(-EQ) %>%
             unique() %>%
-            group_by(EN,fecha) %>%
+            group_by(EN,fecha,pctpropobs) %>%
             mutate(LMU = dplyr::case_when(
             LMU == 0 ~ "inf",
             LMU == 1 ~ "median",
@@ -101,6 +106,12 @@ plotDF_edo <- function(df,edo_str) {
     out <- tryCatch(
         {
           limite <- ifelse(reescalar, get_ylim(df,is_median_ylim), 100)
+          ann_text<-data.frame(fecha=df$fecha,
+                               median=rep(limite ,nrow(df)),
+                               candidato=df$candidato,
+                               label=format(df$pctpropobs,digits=2),
+                               index=seq(1,nrow(df)))
+          ann_text <- ann_text %>% mutate(label=ifelse(as.numeric(substr(as.character(fecha),15,16)) %% 15, "",as.character(label))) %>% mutate(label=ifelse(label=='NA','',label))
           ggplot(df, aes(fecha,median, color=factor(candidato))) +
             geom_line(aes(group = candidato)) +
             geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
@@ -109,8 +120,8 @@ plotDF_edo <- function(df,edo_str) {
             xlab("Hora") +
             ylab("Porcentaje") +
             labs(subtitle = paste("Votacion para gobernador de",edo_str)) +
-            theme(legend.position="bottom")
-
+            theme(legend.position="bottom") +
+            geom_text(data = ann_text,aes(x=fecha,y=median,label=label), size = 3, alpha = 0.1, inherit.aes = FALSE)
         },
         error=function(cond) {
             message(paste("No hay datos para",edo_str))

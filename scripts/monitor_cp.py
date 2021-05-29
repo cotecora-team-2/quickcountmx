@@ -67,6 +67,9 @@ def main(params):
     os.makedirs(params.path_out)
   if not os.path.exists(params.path_mailbox):
     os.makedirs(params.path_mailbox)
+  npath_mailbox = '/'.join(params.path_mailbox.split('/')[:-2]) + '/pctpropobs'
+  if not os.path.exists(npath_mailbox):
+    os.makedirs(npath_mailbox)
   if not os.path.exists(params.last_file):
     with open(params.last_file, "w") as myfile:
       myfile.write('0,\n')
@@ -103,6 +106,7 @@ def main(params):
               nrow = int(infile.readline().strip())
               infile.close()
               keep_trying = True
+              invalid = False
               while keep_trying:
                   last_fn_out = ""
                   try:
