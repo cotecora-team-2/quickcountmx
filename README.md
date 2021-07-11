@@ -7,7 +7,6 @@
 
 [![R build
 status](https://github.com/cotecora-team-2/quickcountmx/workflows/R-CMD-check/badge.svg)](https://github.com/cotecora-team-2/quickcountmx/actions)
-
 [![DOI](https://zenodo.org/badge/333273016.svg)](https://zenodo.org/badge/latestdoi/333273016)
 
 <!-- badges: end -->
@@ -36,3 +35,7 @@ Basic examples:
 library(quickcountmx)
 ## basic example code
 ```
+
+## Citation
+We thank people that use quickcountmx for citing it in their work or publication(s). For this, please use the citation provided at this link DOI
+[![DOI](https://zenodo.org/badge/333273016.svg)](https://zenodo.org/badge/latestdoi/333273016)
