@@ -7,7 +7,11 @@
 
 [![R build
 status](https://github.com/cotecora-team-2/quickcountmx/workflows/R-CMD-check/badge.svg)](https://github.com/cotecora-team-2/quickcountmx/actions)
+
+[![DOI](https://zenodo.org/badge/333273016.svg)](https://zenodo.org/badge/latestdoi/333273016)
+
 <!-- badges: end -->
+
 
 Functions to simulate and estimate Mexican election results based on a
 simple or stratified random sample, the functions were used, among other
