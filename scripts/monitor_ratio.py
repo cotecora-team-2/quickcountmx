@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # usage:
-# python3 scripts/monitor_ratio.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100
+# python3 scripts/monitor_ratio.py --data_path /home/rstudio/workspace/cotecora/unicom/cortes/zac --path_out /home/rstudio/workspace/cotecora/buzon2/razon/zac --wait_sec 5 --team ortizm --last True --b 100 --ntotal 300
 
 import sys, getopt
 import os
@@ -28,6 +28,7 @@ def procesar_nombre(filename):
   return descriptors
 
 def main(params):
+  n_total_muestra = params.ntotal
   if not os.path.exists(params.path_out):
     os.makedirs(params.path_out)
   print("Observando " + params.data_path + " cada "+ str(params.wait_sec) + " segundos.")
@@ -55,7 +56,7 @@ def main(params):
           infile.close()
           print(nrow)
           if nrow > 1:
-              subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
+              subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"',team='"+params.team+"',n_total_sample='"+str(params.ntotal)+"')"]) 
           else:
             print('no se estima con numero de casillas < 2')
     else:
@@ -79,7 +80,8 @@ if __name__ == "__main__":
                         help="Team name")
     parser.add_argument('--last', '-l', type=bool, default=False,
                         help='whether it is the last one')
-
+    parser.add_argument('--ntotal', '-n', type=int, default=False,
+                        help='total sample size')
     params = parser.parse_args()
 
     main(params)

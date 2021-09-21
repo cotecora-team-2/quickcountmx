@@ -45,12 +45,13 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
 #' @param path_out Path to directory where partial results will be
 #' saved.
 #' @param team Name of team running the model, to be used in INE reports.
+#' @param n_total_sample Total sample size.
 #' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day
 #' @export
 ratio_process_batch <- function(path_name, file_name, path_out, B,
-                          team = "default"){
+                          team = "default", n_total_sample){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
@@ -89,17 +90,21 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   #n_estratos <- muestra_m %>% select(estrato) %>% unique() %>% nrow()
   #tot_casillas <- table_frame %>% nrow()
   #n_casillas <- data_in %>% nrow()
-
+  n_muestra_m <- nrow(muestra_m)
+  prop_obs <- n_muestra_m / n_total_muestra
+  print("Proporción observada: ")
+  print(prop_obs)
   # run model ###################
   fit_time <- system.time(
     ratios <- ratio_estimation(muestra_m, stratum = estrato, n_stratum = n,
                             data_stratum = data_stratum_tbl,
-                            parties = all_of(lista_candidatos), B = as.numeric(B))
+                            parties = all_of(lista_candidatos), B = as.numeric(B),
+                            prop_obs = prob_obs)
   )
   print(fit_time)
   print(ratios)
 
-  n_muestra_m <- nrow(muestra_m)
+
 
   write_results_ratio(df = ratios, file_name = file_name,
                 team = team, n_muestra = n_muestra_m, #tot_estratos = tot_estratos, n_estratos = n_estratos,
