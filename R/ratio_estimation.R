@@ -38,7 +38,7 @@
 #' @importFrom rlang :=
 #' @export
 ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties,
-                             std_errors = TRUE, B = 50, seed = NA, prob_obs = 1.0){
+                             std_errors = TRUE, B = 50, seed = NA, prop_obs = 1.0){
 
   parties_enquo <- enquo(parties)
   party_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
