@@ -100,6 +100,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
                             data_stratum = data_stratum_tbl,
                             parties = all_of(lista_candidatos), B = as.numeric(B),
                             prop_obs = prop_obs)
+    ratios$prop_obs <- prop_obs
   )
   print(fit_time)
   print(ratios)
