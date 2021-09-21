@@ -99,7 +99,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
     ratios <- ratio_estimation(muestra_m, stratum = estrato, n_stratum = n,
                             data_stratum = data_stratum_tbl,
                             parties = all_of(lista_candidatos), B = as.numeric(B),
-                            prop_obs = prob_obs)
+                            prop_obs = prop_obs)
   )
   print(fit_time)
   print(ratios)
