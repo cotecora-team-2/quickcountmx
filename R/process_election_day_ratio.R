@@ -91,7 +91,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   #tot_casillas <- table_frame %>% nrow()
   #n_casillas <- data_in %>% nrow()
   n_muestra_m <- nrow(muestra_m)
-  prop_obs <- n_muestra_m / n_total_muestra
+  prop_obs <- n_muestra_m / n_total_sample
   print("Proporción observada: ")
   print(prop_obs)
   # run model ###################
