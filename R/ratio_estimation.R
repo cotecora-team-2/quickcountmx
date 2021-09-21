@@ -86,7 +86,7 @@ sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties, prop_obs = 1
   # B bootstrap replicates
   ratio_reps <- purrr::rerun(B,
       sd_ratio_estimation_aux(data_tbl = data_tbl,
-                              data_stratum = data_stratum, parties = parties, prop_obs = 1.0))
+                              data_stratum = data_stratum, parties = parties, prop_obs = prop_obs))
   std_errors <- bind_rows(ratio_reps) %>%
     group_by(party) %>%
     summarise(std_error = stats::sd(prop), .groups = "drop")
@@ -106,6 +106,7 @@ sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties, prop_obs){
   inv_ratio <- inv_ratio + rnorm(length(inv_ratio), 0, (1-prop_obs) / 10)
   ratio_corrected <- 100 * exp(inv_ratio) / sum(exp(inv_ratio))
   ratio_est <- ratio_est %>% mutate(prop = ratio_corrected)
+  ratio_est
 }
 # auxiliary function, to collapse strata
 collapse_strata <- function(data_tbl, data_stratum){
