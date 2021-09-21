@@ -102,9 +102,9 @@ sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties, prop_obs){
                    stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
                    parties = party_select, std_errors = FALSE)
   # correcto for incomplete sample
-  inv_ratio  <- log(ratio_est$prop)
+  inv_ratio  <- log(ratio_est$prop / 100)
   inv_ratio <- inv_ratio + rnorm(length(inv_ratio), 0, (1-prop_obs) / 10)
-  ratio_corrected <- exp(inv_ratio) / sum(exp(inv_ratio))
+  ratio_corrected <- 100 * exp(inv_ratio) / sum(exp(inv_ratio))
   ratio_est <- ratio_est %>% mutate(prop = ratio_corrected)
 }
 # auxiliary function, to collapse strata
