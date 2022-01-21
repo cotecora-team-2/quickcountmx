@@ -1,15 +1,16 @@
 Package: quickcountmx
 Title: Quick-count estimation package for the 2021 Mexican election
-Version: 0.1
+Version: 2022.1.1
 Authors@R:
     c(person("Teresa", "Ortiz", email = "teresa.ortiz.mancera@gmail.com", role = c("aut", "cre")), 
       person("Felipe", "Gonzalez", email = "felipexgonzalez@gmail.com", role = c("aut")))
-Description: Functions to simulate and estimate Mexican election results based on a simple or stratified random sample, the functions were used, among other methodologies, to anticipate the final results of the 2021 Mexican elections.
+Description: Functions to simulate and estimate Mexican election results based on a simple or stratified random sample, the functions were used, among other methodologies, to anticipate the final results of the 2021-2022 Mexican elections.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: xz
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Suggests: 
     testthat,
     knitr,
@@ -24,9 +25,13 @@ Imports:
     survival,
     cmdstanr,
     posterior,
-    jsonlite
+    jsonlite,
+    tibble,
+    stringr,
+    readr,
+    logger
 Remotes:
     github::stan-dev/cmdstanr
 VignetteBuilder: knitr
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5.0)

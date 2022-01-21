@@ -2,7 +2,9 @@
 
 export(fit_model)
 export(hb_estimation)
+export(process_batch)
 export(ratio_estimation)
+export(ratio_process_batch)
 export(select_sample_prop)
 export(select_sample_str)
 export(simulate_arrivals)
