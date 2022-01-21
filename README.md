@@ -5,8 +5,7 @@
 
 <!-- badges: start -->
 
-[![R build
-status](https://github.com/cotecora-team-2/quickcountmx/workflows/R-CMD-check/badge.svg)](https://github.com/cotecora-team-2/quickcountmx/actions)
+[![R-CMD-check-2022](https://github.com/cotecora-team-2/quickcountmx/actions/workflows/R-CMD-check-2022.yaml/badge.svg)](https://github.com/cotecora-team-2/quickcountmx/actions/workflows/R-CMD-check-2022.yaml)
 [![DOI](https://zenodo.org/badge/333273016.svg)](https://zenodo.org/badge/latestdoi/333273016)
 
 <!-- badges: end -->
@@ -14,7 +13,7 @@ status](https://github.com/cotecora-team-2/quickcountmx/workflows/R-CMD-check/ba
 
 Functions to simulate and estimate Mexican election results based on a
 simple or stratified random sample, the functions were used, among other
-methodologies, to anticipate the final results of the 2021 Mexican
+methodologies, to anticipate the final results of the 2021-2022 Mexican
 elections.
 
 ## Installation
