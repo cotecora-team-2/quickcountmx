@@ -8,6 +8,7 @@ data {
   int<lower=0> y_f[N_f, p] ; // observed vote counts
   int in_sample[N_f];
   vector<lower=0>[N_f] n_f; // nominal counts
+  int<lower=0> nominal_max;
   int stratum_f[N_f];
   matrix[N_f, n_covariates_f] x_f;
 
@@ -43,7 +44,7 @@ transformed data {
   }
   total_nominal = 0;
   for(i in 1:N_f){
-    if(n_f[i] < 1200){
+    if(n_f[i] < nominal_max){
       total_nominal += n_f[i];
     }
   }
@@ -72,13 +73,13 @@ parameters {
 
 transformed parameters {
    matrix[N,p] pred;
-   vector[p] theta[N];
-   vector[N] alpha_bn[p];
+   simplex[p] theta[N];
+   vector<lower=0>[N] alpha_bn[p];
    matrix[n_strata_f, n_covariates_f + 1] beta[p];
    matrix<lower=0>[n_strata_f, p] kappa;
    matrix[n_strata_f, n_covariates_f + 1] beta_part;
-   vector[N] theta_part;
-   vector[N] alpha_bn_part;
+   vector<lower=0, upper = 1>[N] theta_part;
+   vector<lower=0>[N] alpha_bn_part;
    vector[N] pred_part;
 
    // hierarchical beta coefficients for participation
@@ -116,7 +117,8 @@ model {
   for(k in 1:p){
     to_vector(beta_raw[k]) ~ std_normal();
     //sigma[k] ~ normal(0, sigma_param);
-    sigma[k] ~ normal(0, 1);
+    sigma[k][1] ~ normal(0, 3);
+    sigma[k][2:(n_covariates_f + 1)] ~ normal(0, 1);
     Omega[k] ~ lkj_corr_cholesky(2);
     kappa_st_raw[, k] ~ std_normal();
   }
@@ -126,7 +128,8 @@ model {
 
   sigma_kappa ~ normal(0, 0.25);
   //sigma_part ~ normal(0, sigma_param);
-  sigma_part ~ normal(0, 1);
+  sigma_part[1] ~ normal(0, 3);
+  sigma_part[2:(n_covariates_f + 1)] ~ normal(0, 1);
   part_Omega ~ lkj_corr_cholesky(2);
 
   for(k in 1:p){

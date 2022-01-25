@@ -20,7 +20,8 @@ hb_estimation(
   max_treedepth = 10,
   chains = 3,
   model = "mlogit",
-  part = FALSE
+  part = FALSE,
+  nominal_max = 1200
 )
 }
 \arguments{
@@ -61,6 +62,9 @@ generator (optional).}
 \item{model}{One of "mlogit" (the default) or "logit"}
 
 \item{part}{Estimate total voter turnout (part). Default is FALSE.}
+
+\item{nominal_max}{Maximum number of nominal count for stations. Used for
+stations without fixed nominal list.}
 }
 \value{
 A list with model fit (if return_fit=TRUE) and a \code{tibble}
