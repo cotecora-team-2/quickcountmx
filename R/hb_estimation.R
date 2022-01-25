@@ -61,13 +61,13 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   parties_name <- stan_data$parties_name
   stan_data$parties_name <- NULL
   # Compile model
-  if(model == "logit"){
-    path <- system.file("stan", "model_parties.stan", package = "quickcountmx")
+  if(model == "mlogit"){
+    path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
     adapt_delta <- adapt_delta
     max_treedepth <- max_treedepth
     iter_warmup <- num_warmup
   } else {
-    path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
+    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
     adapt_delta <- adapt_delta
     max_treedepth <- max_treedepth
     iter_warmup <- num_warmup
@@ -76,6 +76,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   ## fit
   fit <- model$sample(data = stan_data,
                       seed = seed,
+                      init = 0.2,
                       iter_sampling = num_iter,
                       iter_warmup = num_warmup,
                       chains = chains,
