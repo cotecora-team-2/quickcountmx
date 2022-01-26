@@ -28,6 +28,8 @@
 #' @param chains Number of chains (will be run in parallel)
 #' @param model One of "mlogit" (the default) or "logit"
 #' @param part Estimate total voter turnout (part). Default is FALSE.
+#' @param nominal_max Maximum number of nominal count for stations. Used for
+#' stations without fixed nominal list.
 #' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals.
@@ -39,7 +41,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
-                          chains = 3, model = "mlogit", part = FALSE){
+                          chains = 3, model = "mlogit", part = FALSE, nominal_max = 1200){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -53,7 +55,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   # Prepare data for stan model
   json_path <- system.file("stan", "prior_data.json", package = "quickcountmx")
   parameters <- jsonlite::read_json(json_path, simplifyVector = TRUE)
-
+  parameters$nominal_max <- nominal_max
   data_list <- create_hb_data(data_tbl, sampling_frame,
                               parties = {{parties}}, covariates = {{covariates}},
                               prop_obs = prop_obs)
