@@ -2,7 +2,9 @@
 #'
 #' Compute ratio estimator for each candidate, standard errors are computed
 #' with bootstrap resampling within each stratum and computing the standard
-#' error of the samples (no corrections).
+#' error of the samples. In addition, when estimating with incomplete data,
+#' the parameter prop_obs can be used to
+#' take into account biased observed in previous elections.
 #' @details The bootstrap approach we use is not suitable
 #' when the number of sampled polling stations within a strata is small.
 #' Coverage might improve if confidence intervals are constructed with BCas or
@@ -22,6 +24,8 @@
 #'  defaults to 50.
 #' @param seed integer value used to set the state of the random number
 #' generator (optional). It will only be used when computing standard errors.
+#' @param prop_obs 0 to 1 value indicating the proportion of the planned sample
+#' used for estimation.
 #' @return A \code{tibble} including the ratio estimation for each party
 #'   and standard errors (if requested).
 #' @examples
@@ -34,6 +38,9 @@
 #' sample <- select_sample_prop(conteo_2018, stratum = ID_DISTRITO, 0.06)
 #' ratio_estimation(sample, stratum = ID_DISTRITO,
 #'   data_stratum = stratum_sizes, n_stratum = n_stratum, any_of(c("AMLO", "JAMK")))
+#' ratio_estimation(sample, stratum = ID_DISTRITO,
+#'   data_stratum = stratum_sizes, n_stratum = n_stratum, any_of(c("AMLO", "JAMK")),
+#'   prop_obs = 0.8)
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export

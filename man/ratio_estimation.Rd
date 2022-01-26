@@ -12,7 +12,8 @@ ratio_estimation(
   parties,
   std_errors = TRUE,
   B = 50,
-  seed = NA
+  seed = NA,
+  prop_obs = 1
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ defaults to 50.}
 
 \item{seed}{integer value used to set the state of the random number
 generator (optional). It will only be used when computing standard errors.}
+
+\item{prop_obs}{0 to 1 value indicating the proportion of the planned sample
+used for estimation.}
 }
 \value{
 A \code{tibble} including the ratio estimation for each party
@@ -46,7 +50,9 @@ and standard errors (if requested).
 \description{
 Compute ratio estimator for each candidate, standard errors are computed
 with bootstrap resampling within each stratum and computing the standard
-error of the samples (no corrections).
+error of the samples. In addition, when estimating with incomplete data,
+the parameter prop_obs can be used to
+take into account biased observed in previous elections.
 }
 \details{
 The bootstrap approach we use is not suitable
@@ -64,4 +70,7 @@ stratum_sizes <- conteo_2018 \%>\%
 sample <- select_sample_prop(conteo_2018, stratum = ID_DISTRITO, 0.06)
 ratio_estimation(sample, stratum = ID_DISTRITO,
   data_stratum = stratum_sizes, n_stratum = n_stratum, any_of(c("AMLO", "JAMK")))
+ratio_estimation(sample, stratum = ID_DISTRITO,
+  data_stratum = stratum_sizes, n_stratum = n_stratum, any_of(c("AMLO", "JAMK")),
+  prop_obs = 0.8)
 }
