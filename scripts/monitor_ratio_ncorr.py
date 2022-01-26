@@ -56,7 +56,7 @@ def main(params):
           infile.close()
           print(nrow)
           if nrow > 1:
-              subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"',team='"+params.team+"',n_total_sample='"+str(params.ntotal)+"')"]) 
+              subprocess.call(["r", "-e", "quickcountmx:::ratio_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"',team='"+params.team+"',n_total_sample='"+str(nrow)+"')"]) 
           else:
             print('no se estima con numero de casillas < 2')
     else:

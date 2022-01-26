@@ -1,3 +1,6 @@
+#' Functions to run model using data as is sent by INE in election days
+#'
+
 write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_casillas, n_casillas,
                           path_out, path_mailbox, prop_obs){
   EN <- stringr::str_sub(file_name, 10, 11)

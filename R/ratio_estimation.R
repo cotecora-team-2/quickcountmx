@@ -2,7 +2,9 @@
 #'
 #' Compute ratio estimator for each candidate, standard errors are computed
 #' with bootstrap resampling within each stratum and computing the standard
-#' error of the samples (no corrections).
+#' error of the samples. In addition, when estimating with incomplete data,
+#' the parameter prop_obs can be used to
+#' take into account biased observed in previous elections.
 #' @details The bootstrap approach we use is not suitable
 #' when the number of sampled polling stations within a strata is small.
 #' Coverage might improve if confidence intervals are constructed with BCas or
@@ -22,6 +24,8 @@
 #'  defaults to 50.
 #' @param seed integer value used to set the state of the random number
 #' generator (optional). It will only be used when computing standard errors.
+#' @param prop_obs 0 to 1 value indicating the proportion of the planned sample
+#' used for estimation.
 #' @return A \code{tibble} including the ratio estimation for each party
 #'   and standard errors (if requested).
 #' @examples
@@ -34,11 +38,14 @@
 #' sample <- select_sample_prop(conteo_2018, stratum = ID_DISTRITO, 0.06)
 #' ratio_estimation(sample, stratum = ID_DISTRITO,
 #'   data_stratum = stratum_sizes, n_stratum = n_stratum, any_of(c("AMLO", "JAMK")))
+#' ratio_estimation(sample, stratum = ID_DISTRITO,
+#'   data_stratum = stratum_sizes, n_stratum = n_stratum, any_of(c("AMLO", "JAMK")),
+#'   prop_obs = 0.8)
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
 ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties,
-                             std_errors = TRUE, B = 50, seed = NA){
+                             std_errors = TRUE, B = 50, seed = NA, prop_obs = 1.0){
 
   parties_enquo <- enquo(parties)
   party_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
@@ -76,32 +83,37 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
   if (std_errors == TRUE) {
     ratios_sd <- sd_ratio_estimation(data_tbl = data_tbl,
                                      data_stratum = data_stratum,
-                                     B = B, parties = party_select)
+                                     B = B, parties = party_select, prop_obs = prop_obs)
     ratios <- left_join(ratios, ratios_sd, by = "party") %>%
       arrange(desc(prop))
   }
   return(ratios)
 }
-sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
+sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties, prop_obs = 1.0){
   # B bootstrap replicates
   ratio_reps <- purrr::rerun(B,
       sd_ratio_estimation_aux(data_tbl = data_tbl,
-                              data_stratum = data_stratum, parties = parties))
+                              data_stratum = data_stratum, parties = parties, prop_obs = prop_obs))
   std_errors <- bind_rows(ratio_reps) %>%
     group_by(party) %>%
     summarise(std_error = stats::sd(prop), .groups = "drop")
   return(std_errors)
 }
 # auxiliary function, bootstrap samples of the data and computes ratio estimator
-sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties){
+sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties, prop_obs){
   parties_enquo <- enquo(parties)
   party_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
   sample_boot <- select_sample_prop(data_tbl, stratum = strata, frac = 1,
                                     replace = TRUE)
-  ratio_estimation(data_tbl = sample_boot %>% dplyr::select(-n_strata),
+  ratio_est <- ratio_estimation(data_tbl = sample_boot %>% dplyr::select(-n_strata),
                    stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
                    parties = party_select, std_errors = FALSE)
-
+  # correcto for incomplete sample
+  inv_ratio  <- log(ratio_est$prop / 100)
+  inv_ratio <- inv_ratio + rnorm(length(inv_ratio), 0, (1-prop_obs) / 10)
+  ratio_corrected <- 100 * exp(inv_ratio) / sum(exp(inv_ratio))
+  ratio_est <- ratio_est %>% mutate(prop = ratio_corrected)
+  ratio_est
 }
 # auxiliary function, to collapse strata
 collapse_strata <- function(data_tbl, data_stratum){
