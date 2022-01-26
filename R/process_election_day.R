@@ -58,12 +58,21 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
   #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
 #                                                 EN, R, ".csv"))
 }
+#' Automatically process batch of new data, and write estimates in correct
+#' form for INE systems
+#'
 #' @param path_name Path to a file that will be used for estimation. On election
 #' day it will be a file with a subset of the sample.
 #' @param file_name Name of the file with the data.
 #' @param path_out Path to directory where partial results will be
 #' saved.
 #' @param team Name of team running the model, to be used in INE reports.
+#' @param log_file Path to logfile of process
+#' @param even skipping of batches
+#' @param path_mailbox path to mailbox
+#' @param n_iter number of stan sampling iterations
+#' @param n_warmup numer of stan warmup iterations
+#' @param n_chains number of stan chains
 #' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day

@@ -4,3 +4,5 @@
 inst/doc
 log
 *.log
+.DS_Store
+

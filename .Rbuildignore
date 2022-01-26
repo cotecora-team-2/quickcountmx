@@ -4,3 +4,6 @@
 ^data-raw$
 ^\.github$
 LICENSE.md
+Rmd/
+scripts/
+_vars
