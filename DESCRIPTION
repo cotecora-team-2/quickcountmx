@@ -18,6 +18,7 @@ Suggests:
 Imports: 
     dplyr,
     purrr,
+    magrittr,
     rlang,
     tidyselect,
     tidyr,
