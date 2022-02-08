@@ -29,7 +29,8 @@ Imports:
     tibble,
     stringr,
     readr,
-    logger
+    logger,
+    magrittr
 Remotes:
     github::stan-dev/cmdstanr
 VignetteBuilder: knitr

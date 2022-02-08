@@ -28,6 +28,8 @@
 #' @param chains Number of chains (will be run in parallel)
 #' @param model One of "mlogit" (the default) or "logit"
 #' @param part Estimate total voter turnout (part). Default is FALSE.
+#' @param nominal_max Maximum number of nominal count for stations. Used for
+#' stations without fixed nominal list.
 #' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals.
@@ -39,7 +41,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
-                          chains = 3, model = "mlogit", part = FALSE){
+                          chains = 3, model = "mlogit", part = FALSE, nominal_max = 1200){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -53,7 +55,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   # Prepare data for stan model
   json_path <- system.file("stan", "prior_data.json", package = "quickcountmx")
   parameters <- jsonlite::read_json(json_path, simplifyVector = TRUE)
-
+  parameters$nominal_max <- nominal_max
   data_list <- create_hb_data(data_tbl, sampling_frame,
                               parties = {{parties}}, covariates = {{covariates}},
                               prop_obs = prop_obs)
@@ -61,13 +63,13 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   parties_name <- stan_data$parties_name
   stan_data$parties_name <- NULL
   # Compile model
-  if(model == "logit"){
-    path <- system.file("stan", "model_parties.stan", package = "quickcountmx")
+  if(model == "mlogit"){
+    path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
     adapt_delta <- adapt_delta
     max_treedepth <- max_treedepth
     iter_warmup <- num_warmup
   } else {
-    path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
+    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
     adapt_delta <- adapt_delta
     max_treedepth <- max_treedepth
     iter_warmup <- num_warmup
@@ -76,6 +78,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   ## fit
   fit <- model$sample(data = stan_data,
                       seed = seed,
+                      init = 0.2,
                       iter_sampling = num_iter,
                       iter_warmup = num_warmup,
                       chains = chains,
