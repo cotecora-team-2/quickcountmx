@@ -53,7 +53,11 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
     rename(id_station = {{ id_station }})
 
   # Prepare data for stan model
-  json_path <- system.file("stan", "prior_data.json", package = "quickcountmx")
+  if(model == "mlogit"){
+    json_path <- system.file("stan", "prior_data.json", package = "quickcountmx")
+  } else {
+    json_path <- system.file("stan", "prior_data_corr.json", package = "quickcountmx")
+  }
   parameters <- jsonlite::read_json(json_path, simplifyVector = TRUE)
   parameters$nominal_max <- nominal_max
   data_list <- create_hb_data(data_tbl, sampling_frame,
@@ -84,7 +88,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       chains = chains,
                       refresh = 200,
                       parallel_chains = chains,
-                      step_size = 0.02,
+                      step_size = 0.01,
                       adapt_delta = adapt_delta,
                       max_treedepth = max_treedepth)
   output <- list()
