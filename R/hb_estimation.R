@@ -73,10 +73,18 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
     max_treedepth <- max_treedepth
     iter_warmup <- num_warmup
   } else {
-    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
-    adapt_delta <- adapt_delta
-    max_treedepth <- max_treedepth
-    iter_warmup <- num_warmup
+    if(model == "consulta"){
+      path <- system.file("stan", "model_parties_mlogit_corr_consulta.stan", package = "quickcountmx")
+      adapt_delta <- adapt_delta
+      max_treedepth <- max_treedepth
+      iter_warmup <- num_warmup
+    }
+    else {
+      path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
+      adapt_delta <- adapt_delta
+      max_treedepth <- max_treedepth
+      iter_warmup <- num_warmup
+    }
   }
   model <- cmdstanr::cmdstan_model(path)
   ## fit
