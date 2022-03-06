@@ -57,7 +57,7 @@ parameters {
   vector[n_covariates_f + 1] beta_0_part;
   matrix[n_covariates_f + 1, n_strata_f] beta_part_raw;
   vector<lower=0>[n_covariates_f + 1] sigma_part;
-  vector<lower=0>[n_strata_f] kappa_part;
+  real<lower=0> kappa_part;
   cholesky_factor_corr[n_covariates_f + 1] part_Omega;
   // candidate votes parameters
   vector[n_covariates_f + 1] beta_0[p];
@@ -99,7 +99,7 @@ transformed parameters {
       theta[i] = softmax(to_vector(pred[i, ]));
    }
    for(k in 1:p){
-      alpha_bn[k] = (n .* theta_part) .* to_vector(theta[,k]) ;
+      alpha_bn[k] = to_vector(total) .* to_vector(theta[,k]) ;
    }
 
    // overdispersion over strata
@@ -111,37 +111,35 @@ transformed parameters {
 
 model {
   for(k in 1:p){
-      beta_0[k][1] ~  normal(0, 3);
+      beta_0[k][1] ~  normal(0, 1);
       to_vector(beta_0[k][2:(n_covariates_f + 1)]) ~ normal(0, 1);
   }
-  to_vector(beta_0_part) ~ normal(-2, 1);
+  to_vector(beta_0_part) ~ normal(0, 1);
   to_vector(beta_part_raw) ~ std_normal();
   for(k in 1:p){
     to_vector(beta_raw[k]) ~ std_normal();
-    //sigma[k] ~ normal(0, sigma_param);
-    sigma[k][1] ~ normal(0, 3);
+    sigma[k][1] ~ normal(0, 1);
     sigma[k][2:(n_covariates_f + 1)] ~ normal(0, 1);
     Omega[k] ~ lkj_corr_cholesky(2);
     kappa_st_raw[, k] ~ std_normal();
   }
   to_vector(beta_part_raw) ~ std_normal();
-  kappa_0 ~ normal(0, 10);
-  kappa_part ~ gamma(1, 0.01);
+  kappa_0 ~ normal(2, 2);
+  kappa_part ~ gamma(1, 0.025);
 
-  sigma_kappa ~ normal(0, 5);
+  sigma_kappa ~ normal(0, 0.25);
   //sigma_part ~ normal(0, sigma_param);
-  sigma_part[1] ~ normal(0, 3);
+  sigma_part[1] ~ normal(0, 1);
   sigma_part[2:(n_covariates_f + 1)] ~ normal(0, 1);
   part_Omega ~ lkj_corr_cholesky(2);
 
-  ##for(i in 1:N){
-    ##if(total[i] > 0) {
-      for(k in 1:p){
-        y[,k] ~ neg_binomial_2(alpha_bn[k], alpha_bn[k] ./ to_vector(kappa[stratum, k]));
-      }
-    ##}
-  ##}
-  total ~ neg_binomial_2(alpha_bn_part, alpha_bn_part ./ kappa_part[stratum]);
+  for(i in 1:N)
+    if(total[i] > 0)
+      for(k in 1:p)
+        y[i,k] ~ neg_binomial_2(alpha_bn[k][i], alpha_bn[k][i] ./ kappa[stratum[i], k]);
+
+
+  total ~ neg_binomial_2(alpha_bn_part, alpha_bn_part ./ kappa_part);
 
   prob_outlier ~ beta(200, 50000);
 }
@@ -161,7 +159,6 @@ generated quantities {
   real participacion;
   real total_est[N_f];
   real suma;
-  int outlier_type;
 
   // total
   total_cnt = 0;
@@ -172,10 +169,10 @@ generated quantities {
         total_cnt += total_f[i];
       } else {
         pred_f_part = dot_product(beta_part[stratum_f[i],], x1_f[i,]);
-        //pred_f_part = sigma_coefs * dot_product(x_f[i,], beta_part);
         theta_f_total[i] = inv_logit(pred_f_part);
         alpha_bn_f_part =  n_f[i] * theta_f_total[i];
-        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part * kappa_part[stratum_f[i]]);
+        //total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part / kappa_part[stratum_f[i]]);
+        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part / kappa_part);
         total_cnt += total_est[i];
       }
     }
@@ -194,7 +191,7 @@ generated quantities {
           outlier_station[k] = 0;
         }
         if(bernoulli_rng(prob_outlier)==1){
-            outlier_station[3] = uniform_rng(0, 4);
+            outlier_station[3] = uniform_rng(0, 6);
           }
         for(k in 1:p){
           pred_f[k] = dot_product(beta[k][stratum_f[i],], x1_f[i,]);
