@@ -57,7 +57,6 @@ parameters {
   vector[n_covariates_f + 1] beta_0_part;
   matrix[n_covariates_f + 1, n_strata_f] beta_part_raw;
   vector<lower=0>[n_covariates_f + 1] sigma_part;
-  real<lower=0> kappa_part;
   cholesky_factor_corr[n_covariates_f + 1] part_Omega;
   // candidate votes parameters
   vector[n_covariates_f + 1] beta_0[p];
@@ -65,9 +64,9 @@ parameters {
   vector<lower=0>[n_covariates_f + 1] sigma[p];
   cholesky_factor_corr[n_covariates_f + 1] Omega[p];
 
-  row_vector<lower=0>[p] kappa_0;
-  vector<lower=0>[p] sigma_kappa;
-  matrix[n_strata_f, p] kappa_st_raw;
+  row_vector<lower=0>[p+1] kappa_0;
+  vector<lower=0>[p+1] sigma_kappa;
+  matrix[n_strata_f, p+1] kappa_st_raw;
   real<lower=0, upper=1> prob_outlier;
 
 }
@@ -77,7 +76,7 @@ transformed parameters {
    simplex[p] theta[N];
    vector<lower=0>[N] alpha_bn[p];
    matrix[n_strata_f, n_covariates_f + 1] beta[p];
-   matrix<lower=0>[n_strata_f, p] kappa;
+   matrix<lower=0>[n_strata_f, p+1] kappa;
    matrix[n_strata_f, n_covariates_f + 1] beta_part;
    vector<lower=0, upper = 1>[N] theta_part;
    vector<lower=0>[N] alpha_bn_part;
@@ -124,8 +123,7 @@ model {
     kappa_st_raw[, k] ~ std_normal();
   }
   to_vector(beta_part_raw) ~ std_normal();
-  kappa_0 ~ normal(2, 2);
-  kappa_part ~ gamma(1, 0.025);
+  kappa_0 ~ normal(3, 0.5);
 
   sigma_kappa ~ normal(0, 0.25);
   //sigma_part ~ normal(0, sigma_param);
@@ -139,7 +137,7 @@ model {
         y[i,k] ~ neg_binomial_2(alpha_bn[k][i], alpha_bn[k][i] ./ kappa[stratum[i], k]);
 
 
-  total ~ neg_binomial_2(alpha_bn_part, alpha_bn_part ./ kappa_part);
+  total ~ neg_binomial_2(alpha_bn_part, alpha_bn_part ./ kappa[stratum, p+1]);
 
   prob_outlier ~ beta(200, 50000);
 }
@@ -172,7 +170,7 @@ generated quantities {
         theta_f_total[i] = inv_logit(pred_f_part);
         alpha_bn_f_part =  n_f[i] * theta_f_total[i];
         //total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part / kappa_part[stratum_f[i]]);
-        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part / kappa_part);
+        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part / kappa[stratum_f[i], p+1]);
         total_cnt += total_est[i];
       }
     }
@@ -191,7 +189,7 @@ generated quantities {
           outlier_station[k] = 0;
         }
         if(bernoulli_rng(prob_outlier)==1){
-            outlier_station[3] = uniform_rng(0, 6);
+            outlier_station[3] = uniform_rng(0, 5);
           }
         for(k in 1:p){
           pred_f[k] = dot_product(beta[k][stratum_f[i],], x1_f[i,]);
