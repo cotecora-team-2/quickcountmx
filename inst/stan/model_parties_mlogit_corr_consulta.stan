@@ -158,7 +158,7 @@ generated quantities {
   real participacion;
   real total_est[N_f];
   real suma;
-  array[3] real outlier_station;
+  vector[p] outlier_station;
   // total
 
   for(i in 1:N_f){
