@@ -158,7 +158,7 @@ generated quantities {
   real participacion;
   real total_est[N_f];
   real suma;
-  real outlier_station;
+  array[3] real outlier_station;
   // total
 
   for(i in 1:N_f){
@@ -182,9 +182,9 @@ generated quantities {
         y_out = y_out + to_vector(y_f[i,]);
       } else {
         for(k in 1:p){
-          outlier_station = 0;
+          outlier_station[k] = 0;
           if(bernoulli_rng(prob_outlier)==1){
-            outlier_station = uniform_rng(0, 4);
+            outlier_station[3] = uniform_rng(0, 4);
           }
         }
         for(k in 1:p){
