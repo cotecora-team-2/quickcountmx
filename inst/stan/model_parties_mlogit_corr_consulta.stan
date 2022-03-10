@@ -30,16 +30,20 @@ data {
 }
 
 transformed data {
-  int<lower=0> total_f[N_f] ; // observed totals
-  int<lower=0> total[N] ; // observed totals
+  array[N_f] int<lower=0> total_f; // observed totals
+  array[N] int<lower=0> total; // observed totals
   real<lower=0> total_nominal;
   matrix[N, n_covariates_f + 1] x1;
   matrix[N_f, n_covariates_f + 1] x1_f;
+  int<lower=0> num_outlier = 0;
 
   for(i in 1:N_f){
     total_f[i] = sum(y_f[i, ]);
   }
   for(i in 1:N){
+    if(y[i,3] > 50){
+      num_outlier += 1;
+    }
     total[i] = sum(y[i, ]);
   }
   total_nominal = 0;
@@ -60,16 +64,16 @@ parameters {
   vector<lower=0>[n_strata_f] kappa_part;
   cholesky_factor_corr[n_covariates_f + 1] part_Omega;
   // candidate votes parameters
-  vector[n_covariates_f + 1] beta_0[p];
-  matrix[n_covariates_f + 1, n_strata_f] beta_raw[p];
-  vector<lower=0>[n_covariates_f + 1] sigma[p];
-  cholesky_factor_corr[n_covariates_f + 1] Omega[p];
+  array[p] vector[n_covariates_f + 1] beta_0;
+  array[p] matrix[n_covariates_f + 1, n_strata_f] beta_raw;
+  array[p] vector<lower=0>[n_covariates_f + 1] sigma;
+  array[p] cholesky_factor_corr[n_covariates_f + 1] Omega;
 
   row_vector<lower=0>[p] kappa_0;
   vector<lower=0>[p] sigma_kappa;
   matrix[n_strata_f, p] kappa_st_raw;
-  real<lower=0, upper=1> prob_outlier;
 
+  real<lower=0, upper =1> prob_outlier;
 }
 
 transformed parameters {
@@ -99,7 +103,7 @@ transformed parameters {
       theta[i] = softmax(to_vector(pred[i, ]));
    }
    for(k in 1:p){
-      alpha_bn[k] = (n .* theta_part) .* to_vector(theta[,k]) ;
+      alpha_bn[k] = n .* theta_part .* to_vector(theta[,k]) ;
    }
 
    // overdispersion over strata
@@ -111,10 +115,9 @@ transformed parameters {
 
 model {
   for(k in 1:p){
-      beta_0[k][1] ~  normal(0, 3);
-      to_vector(beta_0[k][2:(n_covariates_f + 1)]) ~ normal(0, 1);
+      to_vector(beta_0[k]) ~ normal(0, 2);
   }
-  to_vector(beta_0_part) ~ normal(-2, 1);
+  to_vector(beta_0_part) ~ normal(0, 1);
   to_vector(beta_part_raw) ~ std_normal();
   for(k in 1:p){
     to_vector(beta_raw[k]) ~ std_normal();
@@ -125,25 +128,21 @@ model {
     kappa_st_raw[, k] ~ std_normal();
   }
   to_vector(beta_part_raw) ~ std_normal();
-  kappa_0 ~ normal(0, 10);
-  kappa_part ~ gamma(1, 0.01);
+  kappa_0 ~ normal(2, 1);
+  kappa_part ~ gamma(kappa_param[1], kappa_param[2]);
 
-  sigma_kappa ~ normal(0, 5);
+  sigma_kappa ~ normal(0, 0.25);
   //sigma_part ~ normal(0, sigma_param);
   sigma_part[1] ~ normal(0, 3);
   sigma_part[2:(n_covariates_f + 1)] ~ normal(0, 1);
   part_Omega ~ lkj_corr_cholesky(2);
 
-  ##for(i in 1:N){
-    ##if(total[i] > 0) {
-      for(k in 1:p){
-        y[,k] ~ neg_binomial_2(alpha_bn[k], alpha_bn[k] ./ to_vector(kappa[stratum, k]));
-      }
-    ##}
-  ##}
-  total ~ neg_binomial_2(alpha_bn_part, alpha_bn_part ./ kappa_part[stratum]);
+  for(k in 1:p){
+    y[,k] ~ neg_binomial_2( alpha_bn[k], alpha_bn[k] ./ to_vector(kappa[stratum, k]));
+  }
 
-  prob_outlier ~ beta(200, 50000);
+  prob_outlier ~ beta(200 + num_outlier, 50000 + N - num_outlier);
+  //num_outlier ~ binomial(N, prob_outlier);
 }
 
 generated quantities {
@@ -155,28 +154,20 @@ generated quantities {
   vector[p] pred_f;
   real pred_f_part;
   real theta_f_total[N_f];
-  real total_cnt;
   vector[p] w_bias;
-  vector[p] outlier_station;
   real participacion;
   real total_est[N_f];
   real suma;
-  int outlier_type;
-
+  real outlier_station;
   // total
-  total_cnt = 0;
 
   for(i in 1:N_f){
       if(in_sample[i] == 1){
         total_est[i] = total_f[i];
-        total_cnt += total_f[i];
       } else {
         pred_f_part = dot_product(beta_part[stratum_f[i],], x1_f[i,]);
         //pred_f_part = sigma_coefs * dot_product(x_f[i,], beta_part);
         theta_f_total[i] = inv_logit(pred_f_part);
-        alpha_bn_f_part =  n_f[i] * theta_f_total[i];
-        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part * kappa_part[stratum_f[i]]);
-        total_cnt += total_est[i];
       }
     }
 
@@ -191,17 +182,16 @@ generated quantities {
         y_out = y_out + to_vector(y_f[i,]);
       } else {
         for(k in 1:p){
-          outlier_station[k] = 0;
-        }
-        if(bernoulli_rng(prob_outlier)==1){
-            outlier_station[3] = uniform_rng(0, 4);
+          outlier_station = 0;
+          if(bernoulli_rng(prob_outlier)==1){
+            outlier_station = uniform_rng(0, 4);
           }
+        }
         for(k in 1:p){
           pred_f[k] = dot_product(beta[k][stratum_f[i],], x1_f[i,]);
-
         }
         theta_f = softmax(to_vector(pred_f + w_bias + outlier_station));
-        alpha_bn_f =  n_f[i] * theta_f * theta_f_total[i];
+        alpha_bn_f =  n_f[i] * theta_f_total[i] * theta_f ;
         for(k in 1:p){
           y_out[k] += neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
         }
@@ -211,7 +201,7 @@ generated quantities {
   for(k in 1:p){
     prop_votos[k] = y_out[k] / suma;
   }
-  participacion = total_cnt / total_nominal;
+  participacion = suma / total_nominal;
 }
 
 
