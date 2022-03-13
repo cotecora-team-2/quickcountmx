@@ -12,7 +12,6 @@ data {
   array[N_f] int stratum_f;
   matrix[N_f, n_covariates_f] x_f;
 
-
   // sample
   int N; // number of stations
   array[N, p] int<lower=0> y; // observed vote counts
@@ -36,6 +35,7 @@ transformed data {
   matrix[N, n_covariates_f + 1] x1;
   matrix[N_f, n_covariates_f + 1] x1_f;
   int<lower=0> num_outlier = 0;
+  real epsilon = 1e-8;
 
   for(i in 1:N_f){
     total_f[i] = sum(y_f[i, ]);
@@ -129,14 +129,14 @@ model {
   to_vector(beta_part_raw) ~ std_normal();
   kappa_0 ~ normal(2, 1);
 
-  sigma_kappa ~ normal(0, 0.25);
+  sigma_kappa ~ normal(0, 0.05);
   //sigma_part ~ normal(0, sigma_param);
-  sigma_part[1] ~ normal(0, 3);
+  sigma_part[1] ~ normal(0, 1);
   sigma_part[2:(n_covariates_f + 1)] ~ normal(0, 1);
   part_Omega ~ lkj_corr_cholesky(2);
 
   for(k in 1:p){
-    y[,k] ~ neg_binomial_2( alpha_bn[k], alpha_bn[k] ./ to_vector(kappa[stratum, k]));
+    y[,k] ~ neg_binomial_2( alpha_bn[k], epsilon + alpha_bn[k] ./ (kappa[stratum, k]));
   }
 
   prob_outlier ~ beta(5, 1000);
@@ -189,7 +189,7 @@ generated quantities {
         theta_f = softmax(to_vector(pred_f + w_bias + outlier_station));
         alpha_bn_f =  n_f[i] * theta_f_total[i] * theta_f ;
         for(k in 1:p){
-          y_out[k] += neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
+          y_out[k] += neg_binomial_2_rng(alpha_bn_f[k], epsilon +alpha_bn_f[k] / kappa[stratum_f[i], k]);
         }
       }
     }
