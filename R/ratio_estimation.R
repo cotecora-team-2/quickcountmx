@@ -58,14 +58,14 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
   }
   data_tbl <- data_tbl %>%
     left_join(data_stratum_collapsed, by = "strata")
-  ratios <- data_tbl %>%
+  data_long_tbl <- data_tbl %>%
+    mutate(internal_id = row_number())  %>%
     group_by(strata) %>%
     mutate(n_h = n()) %>%
     ungroup() %>%
-    tidyr::pivot_longer(cols = {{ parties }}, names_to = "party", values_to = "n_votes") %>%
-    mutate(
-      n_aux = (n_strata / n_h) * n_votes
-    ) %>%
+    tidyr::pivot_longer(cols = {{ parties }}, names_to = "party", values_to = "n_votes")
+  ratios <-  data_long_tbl %>%
+    mutate(n_aux = (n_strata / n_h) * n_votes) %>%
     group_by(strata, party) %>%
     summarise(n_votes = sum(n_aux), .groups = "drop") %>%
     group_by(party) %>%
@@ -73,6 +73,19 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
     mutate(prop = 100 * total_votes / sum(total_votes)) %>%
     select(-total_votes)
 
+  ratio_part <-  data_long_tbl %>%
+    group_by(strata, n_h, n_strata, internal_id, LISTA_NOMINAL) %>%
+    summarise(total_votes = sum(n_votes)) %>%
+    group_by(strata, n_h, n_strata) %>%
+    summarise(total_votes_str = sum(total_votes),
+              total_ln_str = sum(LISTA_NOMINAL)) %>%
+    mutate(total = total_votes_str * n_strata / n_h,
+           total_nominal = total_ln_str * n_strata / n_h) %>%
+    ungroup() %>%
+    summarise(prop = 100 * sum(total) / sum(total_nominal)) %>%
+    mutate(party = "part")
+
+  ratios <- bind_rows(ratios, ratio_part)
   if (std_errors == TRUE) {
     ratios_sd <- sd_ratio_estimation(data_tbl = data_tbl,
                                      data_stratum = data_stratum,
