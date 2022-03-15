@@ -15,6 +15,7 @@ test_that("test point estimates", {
                                 data_stratum = data_stratum,
                                 n_stratum = n,
                                 std_errors = TRUE, seed = 12, parties = cand_1:otro)
-  expect_equal(estimates$prop, 100 * c(10, 5, 1, 16) / sum(10, 5, 1, 70))
+  sum_votes <-  sum(10, 5, 1)
+  expect_equal(estimates$prop, 100 * c(10 / sum_votes, 5 / sum_votes, 16 / 70, 1 / sum_votes) )
   expect_equal(estimates$std_error, c(0, 0, 0, 0))
 })
