@@ -186,7 +186,7 @@ generated quantities {
   for(i in 1:N_f){
       if(in_sample[i] == 1){
         theta_f_total[i] = 0;
-        total_cnt += total[i];
+        total_cnt += total_f[i];
       } else {
         pred_f_part = dot_product(beta_part[stratum_f[i],], x1_f[i,]);
         theta_f_total[i] = inv_logit(pred_f_part);
