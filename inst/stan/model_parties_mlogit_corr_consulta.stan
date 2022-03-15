@@ -191,7 +191,7 @@ generated quantities {
         pred_f_part = dot_product(beta_part[stratum_f[i],], x1_f[i,]);
         theta_f_total[i] = inv_logit(pred_f_part);
         alpha_bn_f_part =  n_f[i] * theta_f_total[i];
-        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part * kappa_part[stratum_f[i]]);
+        total_est[i] = neg_binomial_2_rng(alpha_bn_f_part , alpha_bn_f_part / kappa_part[stratum_f[i]]);
         total_cnt += total_est[i];
         pred_f_part_prop = dot_product(beta_part_prop[stratum_f[i],], x1_f[i,]);
         theta_f_total_prop[i] = inv_logit(pred_f_part_prop);
