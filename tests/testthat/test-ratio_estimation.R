@@ -2,7 +2,7 @@ test_tbl <- dplyr::tibble(
   state = c(rep("A", 10), rep("B", 10), rep("C", 5), rep("D", 4)),
   x = rnorm(29),
   cand_1 = rep(5, 29), cand_2 = rep(10, 29), otro = rep(1, 29)
-) %>% dplyr::mutate(total = cand_1 + cand_2 + otro)
+) %>% dplyr::mutate(total = cand_1 + cand_2 + otro, LISTA_NOMINAL = rep(70, 29))
 
 data_stratum <- test_tbl %>%
   dplyr::group_by(state) %>%
@@ -15,6 +15,7 @@ test_that("test point estimates", {
                                 data_stratum = data_stratum,
                                 n_stratum = n,
                                 std_errors = TRUE, seed = 12, parties = cand_1:otro)
-  expect_equal(estimates$prop, 100 * c(10, 5, 1) / sum(10, 5, 1))
-  expect_equal(estimates$std_error, c(0, 0, 0))
+  sum_votes <-  sum(10, 5, 1)
+  expect_equal(estimates$prop, 100 * c(10 / sum_votes, 5 / sum_votes, 16 / 70, 1 / sum_votes) )
+  expect_equal(estimates$std_error, c(0, 0, 0, 0))
 })
