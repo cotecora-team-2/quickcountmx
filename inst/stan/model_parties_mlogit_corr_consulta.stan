@@ -153,9 +153,7 @@ model {
   sigma_part_prop ~ normal(0, 1);
   part_Omega_prop ~ lkj_corr_cholesky(2);
   for(k in 1:p){
-    for(i in 1:N)
-      if(total[i] > 0)
-        y[i,k] ~ neg_binomial_2( alpha_bn[k][i], epsilon + alpha_bn[k][i] / (kappa[stratum[i], k]));
+        y[,k] ~ neg_binomial_2( alpha_bn[k],  alpha_bn[k] ./ (kappa[stratum, k]));
   }
   total ~ neg_binomial_2(alpha_bn_part, alpha_bn_part ./ kappa_part[stratum]);
 
@@ -212,6 +210,7 @@ generated quantities {
           outlier_station[k] = 0;
           if(bernoulli_rng(prob_outlier)==1){
             outlier_station[3] = uniform_rng(0, 5);
+            //outlier_station[k] = 0;
           }
         }
         for(k in 1:p){
@@ -220,7 +219,7 @@ generated quantities {
         theta_f = softmax(to_vector(pred_f + w_bias + outlier_station));
         alpha_bn_f =  n_f[i] * theta_f_total_prop[i] * theta_f ;
         for(k in 1:p){
-          y_out[k] += neg_binomial_2_rng(alpha_bn_f[k], epsilon +alpha_bn_f[k] / kappa[stratum_f[i], k]);
+          y_out[k] += neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
         }
       }
     }
