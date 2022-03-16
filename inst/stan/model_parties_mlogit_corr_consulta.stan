@@ -144,7 +144,7 @@ model {
     kappa_st_raw[, k] ~ std_normal();
   }
   kappa_0 ~ normal(2, 1);
-  kappa_part ~ gamma(1, 0.01);
+  kappa_part ~ gamma(kappa_param[1], kappa_param[2]);
 
   sigma_kappa ~ normal(0, 0.05);
   //sigma_part ~ normal(0, sigma_param);
