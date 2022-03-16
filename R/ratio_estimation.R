@@ -27,8 +27,9 @@
 #' @examples
 #' # count number of polling stations per stratum
 #' library(dplyr)
+#' conteo_2018 <- conteo_2018 %>%
+#'     dplyr::rename(LISTA_NOMINAL = LISTA_NOMINAL_CASILLA)
 #' stratum_sizes <- conteo_2018 %>%
-#'     dplyr::mutate(LISTA_NOMINAL = LISTA_NOMINAL_CASILLA) %>%
 #'     dplyr::group_by(ID_DISTRITO) %>%
 #'     dplyr::summarise(n_stratum = n())
 #' # stratified random sample (size 6%), sample size proportional to strata size
