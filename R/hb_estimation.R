@@ -78,17 +78,22 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       adapt_delta <- adapt_delta
       max_treedepth <- max_treedepth
       iter_warmup <- num_warmup
-    }
-    else {
+    } else {
+      if(model == "consulta-part"){
+      path <- system.file("stan", "model_parties_mlogit_corr_consulta-participacion.stan", package = "quickcountmx")
+      adapt_delta <- adapt_delta
+      max_treedepth <- max_treedepth
+      iter_warmup <- num_warmup
+      } else {
       path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
       adapt_delta <- adapt_delta
       max_treedepth <- max_treedepth
       iter_warmup <- num_warmup
-    }
-  }
-  model <- cmdstanr::cmdstan_model(path)
+      }
+    } }
+  model_comp <- cmdstanr::cmdstan_model(path)
   ## fit
-  fit <- model$sample(data = stan_data,
+  fit <- model_comp$sample(data = stan_data,
                       seed = seed,
                       init = 0.2,
                       iter_sampling = num_iter,
@@ -104,6 +109,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   if(return_fit == TRUE){
     output$fit <- fit
   }
+  estimates_tbl <- NULL
+  if(model != "consulta-part"){
   sims_tbl <- fit$draws("prop_votos") %>%
       posterior::as_draws_df() %>%
       dplyr::as_tibble()
@@ -117,6 +124,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                 sup = stats::quantile(value, 0.98),
                 ee = stats::sd(value),
                 n_sim = length(value))
+  }
   if(part){
     part_tbl <- fit$draws("participacion") %>%
       posterior::as_draws_df() %>%

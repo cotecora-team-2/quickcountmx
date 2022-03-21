@@ -77,7 +77,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_csv("data-raw/marco_simulacro_0322.csv")
+  table_frame <- readr::read_csv("data-raw/marco_revocacion.csv")
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1) %>%
@@ -85,9 +85,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
-    filter(TOTAL > 0)
-  logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
+                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) 
+  logger::log_info(paste0("numero de casillas leidas: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
 
@@ -102,7 +101,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_muestra_m <- muestra_m %>% nrow()
   logger::log_info(paste0("numero de casillas despues de union con marco: ", n_muestra_m))
 
-  prop_obs <- 0.9 * n_muestra_m / nrow(table_frame)
+  prop_obs <- 0.9 * n_muestra_m / 1600
 
   # run model ###################
   fit_time <- system.time(
