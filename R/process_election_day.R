@@ -97,7 +97,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
 
-  lista_opciones <- c("REVOQUE", "SIGA", "NULOS")
+  lista_opciones <- c("SE_VAYA", "SE_QUEDE", "NULO")
 
   # do processing ########
   muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
@@ -123,12 +123,12 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                          model = "consulta", nominal_max = 3050, part = TRUE)
   )
   print(fit_time)
-  if(even=="0") m<-1
-  else m<-2
-  if(fit_time[3] < 230*m){
+  if(even=="0") m <- 1
+  else m <- 2
+  if(fit_time[3] < 230 * m) {
     logger::log_info("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::SUCCESS)}")
   }
-  else if(fit_time[3] < 290*m){
+  else if(fit_time[3] < 290 * m) {
     logger::log_warn("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::WARN)}")
   }
   else{
