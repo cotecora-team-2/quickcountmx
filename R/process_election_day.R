@@ -108,13 +108,13 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_muestra_m <- muestra_m %>% nrow()
   logger::log_info(paste0("numero de casillas despues de union con marco: ", n_muestra_m))
 
-  prop_obs <- 0.9 * n_muestra_m / 1600
+  prop_obs <- n_muestra_m / 1800
 
   # run model ###################
   fit_time <- system.time(
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = id_casilla,
                          sampling_frame = table_frame,
-                         parties = all_of(lista_opciones), prop_obs = prop_obs,
+                         parties = all_of(lista_opciones), prop_obs = 0.9 * prop_obs,
                          covariates = all_of(c("x")), num_iter = as.numeric(n_iter),
                          chains = as.numeric(n_chains), seed = as.numeric(seed),
                          adapt_delta = as.numeric(adapt_delta),
