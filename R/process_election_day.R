@@ -86,6 +86,13 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
                                   stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) 
+
+  ################# fix id station #######################
+  table_frame <- table_frame  |> 
+    mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
+  data_in <- data_in |> 
+    mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
+  ########################################################
   logger::log_info(paste0("numero de casillas leidas: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
