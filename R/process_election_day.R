@@ -69,7 +69,8 @@ write_results <- function(fit, file_name, team,
 #' @export
 process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
                           team = "default", even="0", n_iter = 100, n_chains = 8,
-                          n_warmup = 180, adapt_delta = 0.80, max_treedepth = 10, seed=221285){
+                          n_warmup = 180, adapt_delta = 0.80, max_treedepth = 10,
+                          nominal_max = 3050, seed=221285){
   logger::log_appender(logger::appender_file(log_file))
   logger::log_layout(logger::layout_glue_colors)
   logger::log_threshold(logger::TRACE)
@@ -77,7 +78,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_csv("data-raw/marco_revocacion.csv")
+  table_frame <- readr::read_csv("data-raw/marco_revocacion.csv") |>
+    mutate(ln = ifelse(LISTA_NOMINAL==0, as.numeric(nominal_max), LISTA_NOMINAL))
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1) %>%
@@ -85,12 +87,12 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) 
+                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0")))
 
   ################# fix id station #######################
-  table_frame <- table_frame  |> 
+  table_frame <- table_frame  |>
     mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
-  data_in <- data_in |> 
+  data_in <- data_in |>
     mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
   ########################################################
   logger::log_info(paste0("numero de casillas leidas: ",data_in %>% nrow()))
@@ -120,7 +122,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                          adapt_delta = as.numeric(adapt_delta),
                          max_treedepth = as.numeric(max_treedepth),
                          num_warmup = as.numeric(n_warmup),
-                         model = "consulta", nominal_max = 3050, part = TRUE)
+                         model = "consulta", nominal_max = as.numeric(nominal_max),
+                         part = TRUE)
   )
   print(fit_time)
   if(even=="0") m<-1

@@ -55,7 +55,7 @@ def main(params):
     logging.info('*** Remesa: {}'.format(filename))
     logging.info("numero de casillas: {}".format(nrow))
     if nrow > 1:
-        subprocess.call(["r", "-e", "quickcountmx:::process_batch('" +params.abs_filename+"','"+descriptores['nombre']+"','"+params.log_file+"','"+params.path_out+"','"+params.path_mailbox+"','"+params.team+"',n_chains='"+str(init_info.INIT_INFO['NUM_CHAINS'])+"',n_iter='"+str(init_info.INIT_INFO['NUM_ITER'])+"',n_warmup='"+str(init_info.INIT_INFO['NUM_WARMUP'])+"',adapt_delta='"+str(init_info.INIT_INFO['ADAPT_DELTA'])+"',max_treedepth='"+str(init_info.INIT_INFO['MAX_TREEDEPTH'])+"',seed='"+str(init_info.INIT_INFO['SEED'])+"')"]) 
+        subprocess.call(["r", "-e", "quickcountmx:::process_batch('"+params.abs_filename+"','"+descriptores['nombre']+"','"+params.log_file+"','"+params.path_out+"','"+params.path_mailbox+"','"+params.team+"',n_chains='"+str(init_info.INIT_INFO['NUM_CHAINS'])+"',n_iter='"+str(init_info.INIT_INFO['NUM_ITER'])+"',n_warmup='"+str(init_info.INIT_INFO['NUM_WARMUP'])+"',adapt_delta='"+str(init_info.INIT_INFO['ADAPT_DELTA'])+"',n_chains='"+str(init_info.INIT_INFO['NUM_CHAINS'])+"',nominal_max='"+str(init_info.INIT_INFO['NOMINAL_MAX'])+"',seed='"+str(init_info.INIT_INFO['SEED'])+"')"]) 
     else:
         logging.info('no se estima con numero de casillas < 2')
 

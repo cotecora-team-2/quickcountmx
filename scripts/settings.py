@@ -32,6 +32,7 @@ class Init_vars():
                         'ADAPT_DELTA': float(self.vars_dict['adapt_delta']),
                         'MAX_TREEDEPTH': int(self.vars_dict['max_treedepth']),
                         'NUM_CHAINS': int(self.vars_dict['num_chains']),
+                        'NOMINAL_MAX': int(self.vars_dict['nominal_max']),
                         'SEED': int(self.vars_dict['seed'])}
             except Exception as e:
                 logging.warning(e)
@@ -41,6 +42,7 @@ class Init_vars():
                         'ADAPT_DELTA': 0.8,
                         'MAX_TREEDEPTH': 10,
                         'NUM_CHAINS': 4,
+                        'NOMINAL_MAX': 3100,
                         'SEED': 221285}
 
 
