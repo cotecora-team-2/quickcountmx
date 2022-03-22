@@ -5,24 +5,26 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
 
   tab_candidatos <- df %>%
     dplyr::arrange(desc(prop)) %>% dplyr::select(party,prop,std_error) %>% filter(party != "OTROS") %>%
-    mutate(inf = prop - stats::qt(0.025, n_muestra - 1) * std_error) %>%
-    mutate(sup = prop + stats::qt(0.025, n_muestra - 1) * std_error) %>%
+    mutate(inf = prop - stats::qt(0.975, n_muestra - 1) * std_error) %>%
+    mutate(sup = prop + stats::qt(0.975, n_muestra - 1) * std_error) %>%
     select(-std_error) %>%
     dplyr::mutate(across(where(is.numeric), round, 1)) %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
     tidyr::gather(LMU, value, -rowname) %>%
-    tidyr::spread(rowname, value) %>% dplyr::mutate(LMU = dplyr::case_when(
+    tidyr::spread(rowname, value) %>% 
+    dplyr::mutate(LMU = dplyr::case_when(
       LMU == "inf" ~ 0,
       LMU == "prop" ~ 1,
       LMU == "sup" ~ 2
-    ),
-    LMU = as.integer(LMU),
-    EQ = team,
-    EN = EN,
-    R = R ) %>%
+      ),
+      LMU = as.integer(LMU),
+      EQ = team,
+      EN = EN,
+      R = R ) %>%
+    dplyr::rename(PART = part) |> 
     relocate(c(EQ,EN,R), .before = everything()) %>%
-    relocate(c(LMU), .after = last_col())
+    relocate(c(PART,LMU), .after = last_col())
 
 
 #  tab_compulsados <- tab_candidatos %>%
