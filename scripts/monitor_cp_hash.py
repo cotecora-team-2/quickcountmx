@@ -115,6 +115,7 @@ def main(params):
             if(descriptores["tipo"] == "REMESAS"):
               full_path = os.path.join(params.data_path, filename)
               infile = open(full_path, 'r')
+              print(infile)
               nrow = int(infile.readline().strip())
               infile.close()
               keep_trying = True
@@ -150,7 +151,7 @@ def main(params):
               logging.info('*** Remesa: {}'.format(filename))
               logging.info("numero de casillas: {}".format(nrow))
               try:
-                  if nrow > 1:
+                  if nrow > 10:
                       if invalid:
                           logging.info("Remesa {} no valida!".format(full_path))
                           raise ValueError("Remesa {} no valida!".format(full_path))
@@ -181,7 +182,7 @@ def main(params):
                                   pass
                           logging.info("Se copio {} como {}".format(last_fn_out,fn_out))
                   else:
-                    logging.info('no se estima con numero de casillas < 2')
+                    logging.info('no se estima con numero de casillas < 10')
               except Exception as e:
                 pass
       else:
