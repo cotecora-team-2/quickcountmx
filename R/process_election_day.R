@@ -99,7 +99,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
 
-  lista_opciones <- c("SE_VAYA", "SE_QUEDE", "NULO")
+  lista_opciones <- c("REVOQUE", "SIGA", "NULOS")
 
   # do processing ########
   muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%

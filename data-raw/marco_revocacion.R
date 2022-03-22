@@ -1,7 +1,7 @@
 library(tidyverse)
 
 
-marco_rev_tmp <- read_csv("../pruebas-conteo/reporte-votacion-sim/votacion_simulada_simulacro.csv")
+marco_rev_tmp <- read_csv("../pruebas-conteo/reporte-votacion-sim/votacion_simulada_simulacro1_OK.csv")
 
 marco_revocacion <- marco_rev_tmp |>
   select(CLAVE_CASILLA:ESTRATO) |>

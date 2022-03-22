@@ -11,8 +11,8 @@ nominal_max=3100
 [00] # Nacional
 
 num_iter=80
-num_warmup=180
-adapt_delta=0.90
+num_warmup=150
+adapt_delta=0.80
 max_treedepth=10
 num_chains=8
 seed=221285

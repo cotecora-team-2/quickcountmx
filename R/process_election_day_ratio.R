@@ -60,34 +60,31 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_rds("data-raw/marco_2021.rds")
+  table_frame <- readr::read_csv("data-raw/marco_revocacion.csv")
   table_frame <- table_frame %>%
-    ungroup() %>%
-    mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, 1200, LISTA_NOMINAL_CASILLA)) %>%
-    filter(ID_ESTADO == as.numeric(estado_str)) %>%
-    mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
+    mutate(ln = LISTA_NOMINAL) %>%
+    #filter(ID_ESTADO == as.numeric(estado_str)) %>%
+    mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA)) |>
+    mutate(estrato = as.character(ID_ESTRATO))
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2021.csv") %>%
-    filter(ID_ESTADO == as.numeric(estado_str))
-  lista_candidatos <- candidatos$CANDIDATO %>% unique()
+  #candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2021.csv") %>%
+  #  filter(ID_ESTADO == as.numeric(estado_str))
+  #lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
-                               trim_ws = TRUE, skip = 1) %>%
-#    mutate(ID_ESTADO = iD_ESTADO) %>%
-    mutate(OTROS = CNR + NULOS) %>%
+                               trim_ws = TRUE, skip = 1) |>
     mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
-    filter(TOTAL > 0)
+                                  stringr::str_pad(EXT_CONTIGUA, 2, pad = "0"))) |>
+    mutate(estrato = as.character(ID_ESTRATO))
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
   # do processing ########
-  muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
-    mutate(estrato = as.character(estrato))
+  muestra_m <- left_join(data_in, table_frame, by = c("CLAVE_CASILLA", "LISTA_NOMINAL", "estrato")) 
   data_stratum_tbl <- table_frame %>%
-    filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
+    count(estrato) %>%
     mutate(estrato = as.character(estrato))
 
   #tot_estratos <- nrow(data_stratum_tbl)
@@ -96,6 +93,8 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   #n_casillas <- data_in %>% nrow()
 
   # run model ###################
+  lista_candidatos <- c("REVOQUE", "SIGA", "NULOS")
+
   fit_time <- system.time(
     ratios <- ratio_estimation(muestra_m, stratum = estrato, n_stratum = n,
                             data_stratum = data_stratum_tbl,
