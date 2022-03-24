@@ -93,7 +93,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
                                         by = "CLAVE_CASILLA")
   if(nrow(casillas_fuera_marco_tbl) > 0){
     print("Existen casilla fuera de marco.")
-    data_in <- data_in |> semijoin(table_frame |> select(CLAVE_CASILLA),
+    data_in <- data_in |> semi_join(table_frame |> select(CLAVE_CASILLA),
                                    by = "CLAVE_CASILLA")
   }
 
