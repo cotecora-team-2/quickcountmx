@@ -109,7 +109,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   if(nrow(casillas_fuera_marco_tbl) > 0){
     logger::log_warn("Se encontraron {nrow(casillas_fuera_marco_tbl)} que no están en marco.")
     readr::write_csv(casillas_fuera_marco_tbl, "casillas_fuera_marco.csv")
-    data_in <- data_in |> semijoin(table_frame |> select(CLAVE_CASILLA),
+    data_in <- data_in |> semi_join(table_frame |> select(CLAVE_CASILLA),
                                    by = "CLAVE_CASILLA")
   }
   # do processing ########
