@@ -115,7 +115,7 @@ def main(params):
             if(descriptores["tipo"] == "REMESAS"):
               full_path = os.path.join(params.data_path, filename)
               infile = open(full_path, 'r')
-              print(infile)
+              #print(infile)
               nrow = int(infile.readline().strip())
               infile.close()
               keep_trying = True
@@ -150,8 +150,10 @@ def main(params):
               logging.info('------------------------------------------------------')
               logging.info('*** Remesa: {}'.format(filename))
               logging.info("numero de casillas: {}".format(nrow))
+              logging.info("nombre: {}".format(descriptores['nombre']))
+              logging.info("procesar: {}".format((int(descriptores['nombre'][-2:]) % 15 == 0)))
               try:
-                  if nrow > 10:
+                  if (nrow > 20) and (int(descriptores['nombre'][-2:]) % 15 == 0):
                       if invalid:
                           logging.info("Remesa {} no valida!".format(full_path))
                           raise ValueError("Remesa {} no valida!".format(full_path))

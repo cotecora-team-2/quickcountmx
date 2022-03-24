@@ -95,13 +95,13 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   ## fit
   fit <- model_comp$sample(data = stan_data,
                       seed = seed,
-                      init = 0.2,
+                      init = 0.0001,
                       iter_sampling = num_iter,
                       iter_warmup = num_warmup,
                       chains = chains,
-                      refresh = 200,
+                      refresh = 100,
                       parallel_chains = chains,
-                      step_size = 0.01,
+                      step_size = 0.001,
                       adapt_delta = adapt_delta,
                       max_treedepth = max_treedepth)
   output <- list()

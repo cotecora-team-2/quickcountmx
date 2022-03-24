@@ -82,18 +82,17 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     mutate(ln = ifelse(LISTA_NOMINAL==0, as.numeric(nominal_max), LISTA_NOMINAL))
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
-                               trim_ws = TRUE, skip = 1) %>%
+                               trim_ws = TRUE, skip = 1) |>
     mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
                                   stringr::str_pad(EXT_CONTIGUA,2,pad="0")))
-
   ################# fix id station #######################
-  table_frame <- table_frame  |>
-    mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
-  data_in <- data_in |>
-    mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
+  #table_frame <- table_frame  |>
+  #  mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
+  #data_in <- data_in |>
+  #  mutate(CLAVE_CASILLA = paste0(CLAVE_CASILLA, stringr::str_pad(NUMERO_ARE, 2, pad = "0")))
   ########################################################
   logger::log_info(paste0("numero de casillas leidas: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
@@ -101,6 +100,18 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
 
   lista_opciones <- c("REVOQUE", "SIGA", "NULOS")
 
+
+  data_in <- data_in |> select(any_of(c("CLAVE_CASILLA", lista_opciones)))
+  ## check out of frame
+  casillas_fuera_marco_tbl <- anti_join(data_in |> select(CLAVE_CASILLA),
+                                    table_frame |> select(CLAVE_CASILLA),
+                                    by = "CLAVE_CASILLA")
+  if(nrow(casillas_fuera_marco_tbl) > 0){
+    logger::log_warn("Se encontraron {nrow(casillas_fuera_marco_tbl)} que no están en marco.")
+    readr::write_csv(casillas_fuera_marco_tbl, "casillas_fuera_marco.csv")
+    data_in <- data_in |> semijoin(table_frame |> select(CLAVE_CASILLA),
+                                   by = "CLAVE_CASILLA")
+  }
   # do processing ########
   muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
     mutate(estrato = as.character(estrato))
@@ -110,7 +121,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_muestra_m <- muestra_m %>% nrow()
   logger::log_info(paste0("numero de casillas despues de union con marco: ", n_muestra_m))
 
-  prop_obs <- n_muestra_m / 1800
+  prop_obs <- n_muestra_m / 1820
 
   # run model ###################
   fit_time <- system.time(

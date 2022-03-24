@@ -12,7 +12,7 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
     tidyr::gather(LMU, value, -rowname) %>%
-    tidyr::spread(rowname, value) %>% 
+    tidyr::spread(rowname, value) %>%
     dplyr::mutate(LMU = dplyr::case_when(
       LMU == "inf" ~ 0,
       LMU == "prop" ~ 1,
@@ -22,7 +22,7 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
       EQ = team,
       EN = EN,
       R = R ) %>%
-    dplyr::rename(PART = part) |> 
+    dplyr::rename(PART = part) |>
     relocate(c(EQ,EN,R), .before = everything()) %>%
     relocate(c(PART,LMU), .after = last_col())
 
@@ -83,8 +83,22 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
     mutate(estrato = as.character(ID_ESTRATO))
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
+
+  lista_opciones <- c("REVOQUE", "SIGA", "NULOS")
+
+  data_in <- data_in |> select(any_of(c("CLAVE_CASILLA", lista_opciones)))
+  ## check out of frame
+  casillas_fuera_marco_tbl <- anti_join(data_in |> select(CLAVE_CASILLA),
+                                        table_frame |> select(CLAVE_CASILLA),
+                                        by = "CLAVE_CASILLA")
+  if(nrow(casillas_fuera_marco_tbl) > 0){
+    print("Existen casilla fuera de marco.")
+    data_in <- data_in |> semijoin(table_frame |> select(CLAVE_CASILLA),
+                                   by = "CLAVE_CASILLA")
+  }
+
   # do processing ########
-  muestra_m <- left_join(data_in, table_frame, by = c("CLAVE_CASILLA", "LISTA_NOMINAL", "estrato")) 
+  muestra_m <- left_join(data_in, table_frame, by = c("CLAVE_CASILLA"))
   data_stratum_tbl <- table_frame %>%
     count(estrato) %>%
     mutate(estrato = as.character(estrato))
@@ -95,12 +109,11 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   #n_casillas <- data_in %>% nrow()
 
   # run model ###################
-  lista_candidatos <- c("REVOQUE", "SIGA", "NULOS")
 
   fit_time <- system.time(
     ratios <- ratio_estimation(muestra_m, stratum = estrato, n_stratum = n,
                             data_stratum = data_stratum_tbl,
-                            parties = all_of(lista_candidatos), B = as.numeric(B))
+                            parties = all_of(lista_opciones), B = as.numeric(B))
   )
   print(fit_time)
   print(ratios)
@@ -108,7 +121,6 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   n_muestra_m <- nrow(muestra_m)
 
   write_results_ratio(df = ratios, file_name = file_name,
-                team = team, n_muestra = n_muestra_m, #tot_estratos = tot_estratos, n_estratos = n_estratos,
-                #tot_casillas, n_casillas,
+                team = team, n_muestra = n_muestra_m,
                 path_out = path_out)
 }
