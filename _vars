@@ -10,7 +10,7 @@ nominal_max=3100
 
 [00] # Nacional
 
-num_iter=75
+num_iter=100
 num_warmup=150
 adapt_delta=0.80
 max_treedepth=10

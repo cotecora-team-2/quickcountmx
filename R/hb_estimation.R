@@ -97,8 +97,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       parallel_chains = chains,
                       step_size = 0.00001,
                       adapt_delta = adapt_delta,
-                      max_treedepth = max_treedepth,
-                      validate_csv = TRUE)
+                      max_treedepth = max_treedepth)
   output <- list()
   output$fit <- NULL
   if(return_fit == TRUE){
@@ -106,9 +105,12 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   }
   estimates_tbl <- NULL
   estimates_tbl <- fit$summary(variables = c("prop_votos", "participacion"),
-                               ~ quantile(.x, probs = c(0.02, 0.5, 0.98)))
-  names(estimates_tbl) <- c("party", "inf", "median", "sup")
+                               ~ quantile(.x, probs = c(0.02, 0.5, 0.98)),
+                               rhat = ~ posterior::rhat(.x),
+                               ess = ~ posterior::ess_basic(.x))
+  names(estimates_tbl) <- c("party", "inf", "median", "sup", "rhat", "ess")
   estimates_tbl$party <- c(parties_name, "part")
+  print(estimates_tbl)
   output$estimates <- estimates_tbl
   return(output)
 }
