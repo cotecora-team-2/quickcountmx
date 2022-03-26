@@ -151,9 +151,8 @@ def main(params):
               logging.info('*** Remesa: {}'.format(filename))
               logging.info("numero de casillas: {}".format(nrow))
               logging.info("nombre: {}".format(descriptores['nombre']))
-              logging.info("procesar: {}".format((int(descriptores['nombre'][-2:]) % 15 == 0)))
               try:
-                  if (nrow > 20) and (int(descriptores['nombre'][-2:]) % 15 == 0):
+                  if nrow > 20:
                       if invalid:
                           logging.info("Remesa {} no valida!".format(full_path))
                           raise ValueError("Remesa {} no valida!".format(full_path))
