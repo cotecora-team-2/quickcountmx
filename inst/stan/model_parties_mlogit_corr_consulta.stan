@@ -66,7 +66,6 @@ parameters {
   vector<lower=0>[n_covariates_f + 1] sigma_part_prop;
   cholesky_factor_corr[n_covariates_f + 1] part_Omega_prop;
 
-  vector<lower=0>[n_strata_f] kappa_part;
   // candidate votes parameters
   array[p-1] vector[n_covariates_f + 1] beta_0;
   array[p-1] matrix[n_covariates_f + 1, n_strata_f] beta_raw;
@@ -128,6 +127,9 @@ model {
   }
   to_vector(beta_0_part_prop) ~ std_normal();
   to_vector(beta_part_prop_raw) ~ std_normal();
+  sigma_part_prop ~ normal(0, 1);
+  part_Omega_prop ~ lkj_corr_cholesky(2);
+
   for(k in 1:(p-1)){
     to_vector(beta_raw[k]) ~ std_normal();
     sigma[k][1] ~ std_normal();
