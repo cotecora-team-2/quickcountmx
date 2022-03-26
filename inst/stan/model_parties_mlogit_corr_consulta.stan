@@ -35,7 +35,6 @@ transformed data {
   matrix[N, n_covariates_f + 1] x1;
   matrix[N_f, n_covariates_f + 1] x1_f;
   int<lower=0> num_outlier = 0;
-  real epsilon = 1e-8;
   vector[N] zeros;
   matrix[n_strata_f, n_covariates_f+1] mat_zeros;
 
@@ -163,14 +162,10 @@ generated quantities {
   array[N_f] real total_est;
   real participacion;
   real sum_votes;
-  real total_cnt;
   vector[p] outlier_station;
 
-  total_cnt = 0;
   for(i in 1:N_f){
-      if(in_sample[i] == 1){
-        total_cnt += total_f[i];
-      } else {
+      if(in_sample[i] == 0){
         pred_f_part_prop = dot_product(beta_part_prop[stratum_f[i],], x1_f[i,]);
         theta_f_total_prop[i] = inv_logit(pred_f_part_prop);
       }

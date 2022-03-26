@@ -95,7 +95,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       chains = chains,
                       refresh = 100,
                       parallel_chains = chains,
-                      step_size = 0.001,
+                      step_size = 0.00001,
                       adapt_delta = adapt_delta,
                       max_treedepth = max_treedepth,
                       validate_csv = TRUE)
