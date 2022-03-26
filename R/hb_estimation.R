@@ -41,7 +41,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
-                          chains = 3, model = "mlogit", part = FALSE, nominal_max = 1200){
+                          chains = 3, model = "mlogit", part = TRUE, nominal_max = 1200){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -79,18 +79,12 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       max_treedepth <- max_treedepth
       iter_warmup <- num_warmup
     } else {
-      if(model == "consulta-part"){
-      path <- system.file("stan", "model_parties_mlogit_corr_consulta-participacion.stan", package = "quickcountmx")
-      adapt_delta <- adapt_delta
-      max_treedepth <- max_treedepth
-      iter_warmup <- num_warmup
-      } else {
       path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
       adapt_delta <- adapt_delta
       max_treedepth <- max_treedepth
       iter_warmup <- num_warmup
-      }
-    } }
+    }
+  }
   model_comp <- cmdstanr::cmdstan_model(path)
   ## fit
   fit <- model_comp$sample(data = stan_data,
@@ -101,41 +95,20 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       chains = chains,
                       refresh = 100,
                       parallel_chains = chains,
-                      step_size = 0.001,
+                      step_size = 0.00001,
                       adapt_delta = adapt_delta,
-                      max_treedepth = max_treedepth)
+                      max_treedepth = max_treedepth,
+                      validate_csv = TRUE)
   output <- list()
   output$fit <- NULL
   if(return_fit == TRUE){
     output$fit <- fit
   }
   estimates_tbl <- NULL
-  if(model != "consulta-part"){
-  sims_tbl <- fit$draws("prop_votos") %>%
-      posterior::as_draws_df() %>%
-      dplyr::as_tibble()
-  names(sims_tbl)[1:length(parties_name)] <- parties_name
-  estimates_tbl <- sims_tbl %>%
-      tidyr::pivot_longer(cols = all_of(parties_name), names_to = "party",
-                   values_to = "value") %>%
-      group_by(party) %>%
-      summarise(median = stats::median(value),
-                inf = stats::quantile(value, 0.02),
-                sup = stats::quantile(value, 0.98),
-                ee = stats::sd(value),
-                n_sim = length(value))
-  }
-  if(part){
-    part_tbl <- fit$draws("participacion") %>%
-      posterior::as_draws_df() %>%
-      dplyr::as_tibble() %>%
-      summarise(median = stats::median(participacion),
-                inf = stats::quantile(participacion, 0.02),
-                sup = stats::quantile(participacion, 0.98),
-                ee = stats::sd(participacion),
-                n_sim = length(participacion))
-    estimates_tbl <- bind_rows(estimates_tbl, part_tbl %>% mutate(party = "part"))
-  }
+  estimates_tbl <- fit$summary(variables = c("prop_votos", "participacion"),
+                               ~ quantile(.x, probs = c(0.02, 0.5, 0.98)))
+  names(estimates_tbl) <- c("party", "inf", "median", "sup")
+  estimates_tbl$party <- c(parties_name, "part")
   output$estimates <- estimates_tbl
   return(output)
 }
