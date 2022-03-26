@@ -184,7 +184,7 @@ def main(params):
                                   pass
                           logging.info("Se copio {} como {}".format(last_fn_out,fn_out))
                   else:
-                    logging.info('no se estima con numero de casillas < 10')
+                    logging.info('no se estima con numero de casillas < 20')
               except Exception as e:
                 pass
       else:
