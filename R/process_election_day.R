@@ -5,7 +5,7 @@ write_results <- function(fit, file_name, team,
 
   tab_candidatos <- fit$estimates %>%
     dplyr::mutate(across(where(is.numeric), ~. * 100)) %>%
-    dplyr::mutate(across(where(is.numeric), round, 1)) %>%
+    dplyr::mutate(across(where(is.numeric), round, 2)) %>%
     dplyr::arrange(desc(median)) %>% dplyr::select(party,median,inf,sup) %>% filter(party != "OTROS") %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
