@@ -27,7 +27,6 @@
 #' @param max_treedepth The maximum allowed tree depth for the NUTS engine (default 10)
 #' @param chains Number of chains (will be run in parallel)
 #' @param model One of "mlogit" (the default) or "logit"
-#' @param part Estimate total voter turnout (part). Default is FALSE.
 #' @param nominal_max Maximum number of nominal count for stations. Used for
 #' stations without fixed nominal list.
 #' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
@@ -41,7 +40,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
-                          chains = 3, model = "mlogit", part = FALSE, nominal_max = 1200){
+                          chains = 3, model = "mlogit", nominal_max = 1200){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -90,7 +89,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   ## fit
   fit <- model$sample(data = stan_data,
                       seed = seed,
-                      init = 0.2,
+                      init = 0.01,
                       iter_sampling = num_iter,
                       iter_warmup = num_warmup,
                       chains = chains,
@@ -98,36 +97,20 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       parallel_chains = chains,
                       step_size = 0.01,
                       adapt_delta = adapt_delta,
-                      max_treedepth = max_treedepth)
+                      max_treedepth = max_treedepth,
+                      validate_csv = TRUE)
   output <- list()
   output$fit <- NULL
   if(return_fit == TRUE){
     output$fit <- fit
   }
-  sims_tbl <- fit$draws("prop_votos") %>%
-      posterior::as_draws_df() %>%
-      dplyr::as_tibble()
-  names(sims_tbl)[1:length(parties_name)] <- parties_name
-  estimates_tbl <- sims_tbl %>%
-      tidyr::pivot_longer(cols = all_of(parties_name), names_to = "party",
-                   values_to = "value") %>%
-      group_by(party) %>%
-      summarise(median = stats::median(value),
-                inf = stats::quantile(value, 0.02),
-                sup = stats::quantile(value, 0.98),
-                ee = stats::sd(value),
-                n_sim = length(value))
-  if(part){
-    part_tbl <- fit$draws("participacion") %>%
-      posterior::as_draws_df() %>%
-      dplyr::as_tibble() %>%
-      summarise(median = stats::median(participacion),
-                inf = stats::quantile(participacion, 0.02),
-                sup = stats::quantile(participacion, 0.98),
-                ee = stats::sd(participacion),
-                n_sim = length(participacion))
-    estimates_tbl <- bind_rows(estimates_tbl, part_tbl %>% mutate(party = "part"))
-  }
+  estimates_tbl <- NULL
+  estimates_tbl <- fit$summary(variables = c("prop_votos", "participacion"),
+                               ~ quantile(.x, probs = c(0.025, 0.5, 0.975)),
+                               rhat = ~ posterior::rhat(.x),
+                               ess = ~ posterior::ess_basic(.x))
+  names(estimates_tbl) <- c("party", "inf", "median", "sup", "rhat", "ess")
+  estimates_tbl$party <- c(parties_name, "part")
   output$estimates <- estimates_tbl
   return(output)
 }

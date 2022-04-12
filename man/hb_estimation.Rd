@@ -20,7 +20,6 @@ hb_estimation(
   max_treedepth = 10,
   chains = 3,
   model = "mlogit",
-  part = FALSE,
   nominal_max = 1200
 )
 }
@@ -60,8 +59,6 @@ generator (optional).}
 \item{chains}{Number of chains (will be run in parallel)}
 
 \item{model}{One of "mlogit" (the default) or "logit"}
-
-\item{part}{Estimate total voter turnout (part). Default is FALSE.}
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
 stations without fixed nominal list.}
