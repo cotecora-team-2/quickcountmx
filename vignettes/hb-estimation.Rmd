@@ -63,7 +63,7 @@ To select a proportional sample
 
 ```{r}
 sample <- select_sample_prop(conteo, 
-                             stratum = distrito_f, frac = 0.15, seed = 100)
+                             stratum = distrito_f, frac = 0.25, seed = 1010)
 nrow(sample)
 ```
 
@@ -80,8 +80,10 @@ fit_estimates <- hb_estimation(sample, stratum = distrito_f,
                       covariates = .fittedPC1,
                       #covariates = c(.fittedPC1, .fittedPC2, tipo_1, tipo_2, ln_log_c),
                       model = "mlogit-corr",
-                      chains = 2, num_iter = 200, 
-                      adapt_delta = 0.9,
+                      chains = 2, 
+                      num_warmup = 200,
+                      num_iter = 200, 
+                      adapt_delta = 0.8,
                       # increase chains and num_iter
                       seed = 123)
 ```
@@ -109,7 +111,7 @@ fit_estimates <- hb_estimation(sample_censored, stratum = distrito_f,
                       covariates = c(.fittedPC1, tipo_1, tipo_2, ln_log_c),
                       prop_obs = prop_obs, 
                       model = "mlogit-corr",
-                      chains = 1, num_iter = 200, # increase chains and num_iter
+                      chains = 2, num_iter = 200, # increase chains and num_iter
                       max_treedepth = 11,
                       seed = 123)
 ```
@@ -165,7 +167,8 @@ fit_estimates <- hb_estimation(sample, stratum = estrato_df,
                       sampling_frame =  conteo,
                       parties = c(all_of(contains("CAND")), OTROS),
                       covariates = .fittedPC1,
-                      chains = 1, num_iter = 200, # increase chains and num_iter
+                      model = "mlogit-corr",
+                      chains = 2, num_iter = 200, # increase chains and num_iter
                       seed = 123)
 ```
 
