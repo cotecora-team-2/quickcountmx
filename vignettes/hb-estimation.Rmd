@@ -85,7 +85,7 @@ fit_estimates <- hb_estimation(sample, stratum = distrito_f,
                       num_iter = 200, 
                       adapt_delta = 0.8,
                       # increase chains and num_iter
-                      seed = 1234)
+                      seed = 123)
 ```
 
 

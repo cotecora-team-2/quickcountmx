@@ -1,5 +1,6 @@
 set.seed(823)
-cmdstanr::install_cmdstan(cores = 2)
+if(is.null(cmdstanr::cmdstan_default_path()))
+  cmdstanr::install_cmdstan(cores = 2)
 
 test_tbl <- dplyr::tibble(
   id_station = 1:29,
@@ -38,8 +39,8 @@ test_that("test call", {
                              num_iter = 100, chains = 1)
   estimates <- fit$estimates
   expect_is(estimates, "tbl")
-  expect_equal(nrow(estimates), 3)
-  expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16))), 0.05)
+  expect_equal(nrow(estimates), 4)
+  expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
 
 test_that("test call corr", {
@@ -53,6 +54,6 @@ test_that("test call corr", {
                        num_iter = 100, chains = 1)
   estimates <- fit$estimates
   expect_is(estimates, "tbl")
-  expect_equal(nrow(estimates), 3)
-  expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16))), 0.05)
+  expect_equal(nrow(estimates), 4)
+  expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
