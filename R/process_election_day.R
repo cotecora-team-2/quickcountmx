@@ -5,7 +5,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 
   tab_candidatos <- fit$estimates %>%
     dplyr::mutate(across(where(is.numeric), ~. * 100)) %>%
-    dplyr::mutate(across(where(is.numeric), round, 1)) %>%
+    dplyr::mutate(across(where(is.numeric), round, 2)) %>%
     dplyr::arrange(desc(median)) %>% dplyr::select(party,median,inf,sup) %>% filter(party != "OTROS") %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
@@ -23,7 +23,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
     relocate(c(PART,LMU), .after = last_col())
 
   prop_obs_str <- format(prop_obs,digits=3)
-  tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(as.numeric(prop_obs_str)*100))
+  #tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(as.numeric(prop_obs_str)*100))
 #  tab_compulsados <- tab_candidatos %>%
 #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
 #           EST_REC = ifelse(LMU == 0,n_estratos,""),
@@ -37,10 +37,10 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
                                           EN, R, ".csv"))
   p <- stringr::str_split(path_mailbox, "/", simplify = TRUE)
   l <- length(p)-2
-  npath_mailbox <- paste(p[1:l],collapse='/')
+  #npath_mailbox <- paste(p[1:l],collapse='/')
 
-  readr::write_csv(tab_pctpropobs, paste0(npath_mailbox, "/pctpropobs/", "pctpropobs",EN,".csv"),
-             append = TRUE, col_names = FALSE)
+  #readr::write_csv(tab_pctpropobs, paste0(npath_mailbox, "/pctpropobs/", "pctpropobs",EN,".csv"),
+  #           append = TRUE, col_names = FALSE)
 
   row1 <- paste(stringr::str_pad(names(tab_candidatos),7,pad=" "),collapse = " ")
   row2 <- paste(stringr::str_pad(as.character(tab_candidatos[1,]),7,pad = " "), collapse = " ")
@@ -168,7 +168,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos), prop_obs = prop_obs,
                           covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
-                         chains = as.numeric(n_chains), seed = as.numeric(seed), part = TRUE)
+                         chains = as.numeric(n_chains), seed = as.numeric(seed))
   )
   print(fit_time)
   if(even=="0") m<-1

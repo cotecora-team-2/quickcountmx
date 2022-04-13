@@ -83,7 +83,7 @@ fit_estimates <- hb_estimation(sample, stratum = distrito_f,
                       chains = 2, num_iter = 200, 
                       adapt_delta = 0.9,
                       # increase chains and num_iter
-                      seed = 123, part = TRUE)
+                      seed = 123)
 ```
 
 
@@ -110,7 +110,7 @@ fit_estimates <- hb_estimation(sample_censored, stratum = distrito_f,
                       prop_obs = prop_obs, 
                       model = "mlogit-corr",
                       chains = 1, num_iter = 200, # increase chains and num_iter
-                      part = TRUE, max_treedepth = 11,
+                      max_treedepth = 11,
                       seed = 123)
 ```
 
