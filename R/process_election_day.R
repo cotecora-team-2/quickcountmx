@@ -76,7 +76,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @export
 process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
                           team = "default", even="0", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, seed=221285){
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1200, seed=221285){
   logger::log_appender(logger::appender_file(log_file))
   logger::log_layout(logger::layout_glue_colors)
   logger::log_threshold(logger::TRACE)
@@ -84,14 +84,14 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_rds("data-raw/marco_2021.rds")
-  table_frame <- table_frame %>%
-    ungroup() %>%
-    mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, 1200, LISTA_NOMINAL_CASILLA)) %>%
-    filter(ID_ESTADO == as.numeric(estado_str)) %>%
+  table_frame <- readr::read_rds("data-raw/marco_2022.rds")
+  table_frame <- table_frame |>
+    ungroup() |>
+    mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, as.numeric(nominal_max), LISTA_NOMINAL_CASILLA)) |>
+    filter(ID_ESTADO == as.numeric(estado_str)) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2021.csv") %>%
+  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2022.csv") |>
     filter(ID_ESTADO == as.numeric(estado_str)) #%>%
 #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
@@ -104,8 +104,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
-    filter(TOTAL > 0)
+                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0"))) 
   logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
@@ -167,13 +166,15 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos), prop_obs = prop_obs,
+                          model = "mlogit-corr",
                           covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
+                          max_nominal = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed))
   )
   print(fit_time)
-  if(even=="0") m<-1
-  else m<-2
-  if(fit_time[3] < 230*m){
+  if(even == "0") m <- 1
+  else m <- 2
+  if(fit_time[3] < 230 * m){
       logger::log_info("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::SUCCESS)}")
   }
   else if(fit_time[3] < 290*m){
