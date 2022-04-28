@@ -70,6 +70,8 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @param n_iter number of stan sampling iterations
 #' @param n_warmup numer of stan warmup iterations
 #' @param n_chains number of stan chains
+#' @param nominal_max maximum number of votes in special stations
+#' @param seed random seed 
 #' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day
