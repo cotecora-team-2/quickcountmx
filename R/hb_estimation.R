@@ -98,7 +98,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       step_size = 0.01,
                       adapt_delta = adapt_delta,
                       max_treedepth = max_treedepth,
-                      diagnostics = TRUE)
+                      validate_csv = TRUE)
   output <- list()
   output$fit <- NULL
   if(return_fit == TRUE){
