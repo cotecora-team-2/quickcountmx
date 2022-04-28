@@ -87,7 +87,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   table_frame <- readr::read_rds("data-raw/marco_2022.rds")
   table_frame <- table_frame |>
     ungroup() |>
-    mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, as.numeric(nominal_max), LISTA_NOMINAL_CASILLA)) |>
+    mutate(ln = ifelse(LISTA_NOMINAL==0, as.numeric(nominal_max), LISTA_NOMINAL)) |>
     filter(ID_ESTADO == as.numeric(estado_str)) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
@@ -167,7 +167,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos), prop_obs = prop_obs,
                           model = "mlogit-corr",
-                          covariates = comp_marg_imp, num_iter = as.numeric(n_iter),
+                          covariates = all_of(c("seccion_no_urbana")), num_iter = as.numeric(n_iter),
                           max_nominal = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed))
   )
