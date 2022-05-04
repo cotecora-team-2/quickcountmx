@@ -20,6 +20,7 @@ process_batch(
   n_warmup = 200,
   adapt_delta = 0.8,
   max_treedepth = 10,
+  nominal_max = 1200,
   seed = 221285
 )
 
@@ -52,8 +53,9 @@ saved.}
 
 \item{max_treedepth}{The maximum allowed tree depth for the NUTS engine (default 10)}
 
-\item{seed}{integer value used to set the state of the random number
-generator (optional).}
+\item{nominal_max}{maximum number of votes in special stations}
+
+\item{seed}{random seed}
 
 \item{B}{Number of bootstrap replicates used to compute standard errors,
 defaults to 50.}

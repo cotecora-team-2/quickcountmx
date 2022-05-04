@@ -111,6 +111,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                                ess = ~ posterior::ess_basic(.x))
   names(estimates_tbl) <- c("party", "inf", "median", "sup", "rhat", "ess")
   estimates_tbl$party <- c(parties_name, "part")
+  print(estimates_tbl)
   output$estimates <- estimates_tbl
   return(output)
 }

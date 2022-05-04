@@ -65,7 +65,7 @@ select_sample_str <- function(sampling_frame, allocation,
   } else {
     # if sample size not integer we round it
     frame_grouped_tbl <- frame_grouped_tbl %>%
-      mutate("{{ sample_size }}" := round({{sample_size}}))
+      mutate("{{ sample_size }}" := as.integer(round({{sample_size}})))
     sample_tbl <- frame_grouped_tbl %>%
       sample_n({{ sample_size }}, replace = replace)
   }
