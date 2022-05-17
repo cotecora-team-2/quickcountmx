@@ -52,10 +52,11 @@ error of the samples (no corrections).
 # count number of polling stations per stratum
 library(dplyr)
 conteo_2018 <- conteo_2018 \%>\%
-    dplyr::rename(ln = LISTA_NOMINAL_CASILLA)
+    rename(ln = LISTA_NOMINAL_CASILLA) \%>\%
+    mutate(ln = ifelse(ln == 0, 1200, ln))
 stratum_sizes <- conteo_2018 \%>\%
-    dplyr::group_by(ID_DISTRITO) \%>\%
-    dplyr::summarise(n_stratum = n())
+    group_by(ID_DISTRITO) \%>\%
+    summarise(n_stratum = n())
 # stratified random sample (size 6\%), sample size proportional to strata size
 sample <- select_sample_prop(conteo_2018, stratum = ID_DISTRITO, 0.06)
 normal_estimation(sample, stratum = ID_DISTRITO,

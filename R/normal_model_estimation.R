@@ -24,10 +24,11 @@
 #' # count number of polling stations per stratum
 #' library(dplyr)
 #' conteo_2018 <- conteo_2018 %>%
-#'     dplyr::rename(ln = LISTA_NOMINAL_CASILLA)
+#'     rename(ln = LISTA_NOMINAL_CASILLA) %>%
+#'     mutate(ln = ifelse(ln == 0, 1200, ln))
 #' stratum_sizes <- conteo_2018 %>%
-#'     dplyr::group_by(ID_DISTRITO) %>%
-#'     dplyr::summarise(n_stratum = n())
+#'     group_by(ID_DISTRITO) %>%
+#'     summarise(n_stratum = n())
 #' # stratified random sample (size 6%), sample size proportional to strata size
 #' sample <- select_sample_prop(conteo_2018, stratum = ID_DISTRITO, 0.06)
 #' normal_estimation(sample, stratum = ID_DISTRITO,
@@ -55,6 +56,13 @@ normal_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, partie
   } else {
     data_stratum_collapsed <- data_stratum
   }
+  # filter strata with only one point
+  count_tbl <- data_tbl |> count(strata) |> filter(n > 1) |>
+    select(strata)
+  if(nrow(count_tbl) > 0){
+    data_tbl <- semi_join(data_tbl, count_tbl, by = "strata")
+  }
+
   data_tbl <- data_tbl %>%
     left_join(data_stratum_collapsed, by = "strata")
   data_long_tbl <- data_tbl %>%
@@ -69,7 +77,7 @@ normal_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, partie
     mutate(model = map(data, ~ lm(n_votes ~ -1 + ln, data = .x,  weights =  1 / ln ))) |>
     mutate(estimate = map_dbl(model, ~ coef(.x)[1]))
   total_estimates_tbl <- estimates_tbl |>
-    unnest(c(data)) |>
+    tidyr::unnest(c(data)) |>
     group_by(party, strata, n_strata) |>
     summarise(mean_est_cand = mean( estimate * ln), .groups = "drop") |>
     mutate(total_est_cand = n_strata * mean_est_cand) |>
@@ -133,7 +141,7 @@ sd_normal_estimation_aux <- function(data_tbl, models_tbl, data_stratum, party_n
     mutate(n_votes = rnorm(length(est_mean), mean_votes, est_sigma)) |>
     ungroup() |>
     dplyr::select(internal_id, strata, party, LISTA_NOMINAL, ln, n_votes) |>
-    pivot_wider(names_from = "party", values_from = "n_votes")
+    tidyr::pivot_wider(names_from = "party", values_from = "n_votes")
   normal_estimation(data_tbl = sample_boot,
                    stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
                    parties = all_of(party_names), std_errors = FALSE)
