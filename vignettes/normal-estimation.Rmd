@@ -2,7 +2,7 @@
 title: "Sample selection, censored samples and normal model estimates"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{ratio-estimation}
+  %\VignetteIndexEntry{normal-estimation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
