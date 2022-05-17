@@ -1,0 +1,83 @@
+---
+title: "Sample selection, censored samples and normal model estimates"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ratio-estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(quickcountmx)
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+data("conteo_2018")
+nrow(conteo_2018)
+```
+
+
+The final computations can calculated as follows: 
+
+```{r}
+conteo_2018 <- conteo_2018 %>% 
+  filter(TOTAL_VOTOS_CALCULADOS!= 0) %>% 
+  filter(ID_DISTRITO != 0) %>% 
+  mutate(distrito_f = interaction(ID_ESTADO, ID_DISTRITO)) |> 
+  mutate(LISTA_NOMINAL = LISTA_NOMINAL_CASILLA)
+final_computos <- conteo_2018 %>% 
+  select(any_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "TOTAL_VOTOS_CALCULADOS"))) %>%
+  summarise(across(where(is.numeric), ~ sum(.x, na.rm = TRUE))) %>% 
+  mutate(across(where(is.numeric), ~ .x / TOTAL_VOTOS_CALCULADOS))%>% 
+  pivot_longer(cols = everything(), names_to = "candidato", values_to = "prop")
+final_computos
+```
+
+To select a proportional sample
+
+```{r}
+# select sample
+sample <- select_sample_prop(conteo_2018, 
+                             stratum = distrito_f, frac = 0.01, seed = 100) |> 
+  mutate(ln = ifelse(LISTA_NOMINAL == 0, 1200, LISTA_NOMINAL)) |> 
+  mutate(OTROS = CAND_IND_01 + VN + CNR)
+nrow(sample)
+```
+
+
+Normal model estimates:
+
+```{r}
+stratification <- conteo_2018 %>% 
+  group_by(distrito_f) %>% 
+  count()
+estimates <- normal_estimation(sample, stratum = distrito_f,
+                              data_stratum = stratification, n_stratum = n,
+                              B = 20, seed = 123, std_errors = TRUE,
+                              parties = all_of(c("AMLO", "JAMK", "RAC", 
+                                                 "CAND_IND_02","OTROS")))
+estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
+```
+
+Comparison with ratio estimates:
+
+```{r}
+estimates_ratio <- ratio_estimation(sample, stratum = distrito_f,
+                              data_stratum = stratification, n_stratum = n,
+                              B = 20, seed = 123, std_errors = TRUE,
+                              parties = all_of(c("AMLO", "JAMK", "RAC", 
+                                                 "CAND_IND_02" ,
+                                                 "OTROS")))
+estimates_ratio %>% mutate(across(where(is.numeric), ~round(.x, 2))) |> 
+  filter(party!="part")
+```
