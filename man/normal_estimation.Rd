@@ -52,7 +52,7 @@ error of the samples (no corrections).
 # count number of polling stations per stratum
 library(dplyr)
 conteo_2018 <- conteo_2018 \%>\%
-    dplyr::rename(LISTA_NOMINAL = LISTA_NOMINAL_CASILLA)
+    dplyr::rename(ln = LISTA_NOMINAL_CASILLA)
 stratum_sizes <- conteo_2018 \%>\%
     dplyr::group_by(ID_DISTRITO) \%>\%
     dplyr::summarise(n_stratum = n())
