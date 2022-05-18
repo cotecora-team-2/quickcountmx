@@ -57,10 +57,10 @@ normal_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, partie
     data_stratum_collapsed <- data_stratum
   }
   # filter strata with only one point
-  count_tbl <- data_tbl |> count(strata) |> filter(n > 1) |>
+  count_tbl <- data_tbl |> count(strata) |> filter(n <= 1) |>
     select(strata)
   if(nrow(count_tbl) > 0){
-    data_tbl <- semi_join(data_tbl, count_tbl, by = "strata")
+    data_tbl <- anti_join(data_tbl, count_tbl, by = "strata")
   }
 
   data_tbl <- data_tbl %>%
@@ -140,7 +140,7 @@ sd_normal_estimation_aux <- function(data_tbl, models_tbl, data_stratum, party_n
     mutate(mean_votes = est_mean * ln) |>
     mutate(n_votes = rnorm(length(est_mean), mean_votes, est_sigma)) |>
     ungroup() |>
-    dplyr::select(internal_id, strata, party, LISTA_NOMINAL, ln, n_votes) |>
+    dplyr::select(internal_id, strata, party, ln, n_votes) |>
     tidyr::pivot_wider(names_from = "party", values_from = "n_votes")
   normal_estimation(data_tbl = sample_boot,
                    stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
