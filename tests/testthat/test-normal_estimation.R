@@ -20,6 +20,6 @@ test_that("test point estimates", {
                                 data_stratum = data_stratum,
                                 n_stratum = n,
                                 std_errors = TRUE, seed = 12, parties = cand_1:otro)
-  expect_equal(estimates$prop,  c(0.623, 0.282, 0.0942), tolerance = 0.0005)
-  expect_equal(estimates$std_error, c(0.0301, 0.0291, 0.0181), tolerance = 0.005)
+  expect_equal(estimates$prop,  c(0.623, 0.282, 0.0942), tolerance = 0.02)
+  expect_equal(estimates$std_error, c(0.0301, 0.0291, 0.0181), tolerance = 0.02)
 })

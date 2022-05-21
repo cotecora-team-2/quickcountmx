@@ -74,7 +74,8 @@ normal_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, partie
   estimates_tbl <- data_long_tbl |>
     group_by(strata, party, n_strata) |>
     tidyr::nest() |>
-    mutate(model = map(data, ~ lm(n_votes ~ -1 + ln, data = .x,  weights =  1 / ln ))) |>
+    mutate(model = map(data,
+      ~ stats::lm(n_votes/ln ~ 1, data = .x))) |>
     mutate(estimate = map_dbl(model, ~ coef(.x)[1]))
   total_estimates_tbl <- estimates_tbl |>
     tidyr::unnest(c(data)) |>
@@ -138,7 +139,10 @@ sd_normal_estimation_aux <- function(data_tbl, models_tbl, data_stratum, party_n
            est_sigma = map_dbl(params, ~ .x@sigma[1])) |>
     tidyr::unnest(c(data)) |>
     mutate(mean_votes = est_mean * ln) |>
-    mutate(n_votes = rnorm(length(est_mean), mean_votes, est_sigma)) |>
+    mutate(est_sigma_p = est_sigma * ln) |>
+    mutate(n_votes = rnorm(length(est_mean), mean_votes, est_sigma_p)) |>
+    mutate(n_votes = ifelse(n_votes < 0, 0, n_votes)) |>
+    mutate(n_votes = ifelse(n_votes > ln, ln, n_votes)) |>
     ungroup() |>
     dplyr::select(internal_id, strata, party, ln, n_votes) |>
     tidyr::pivot_wider(names_from = "party", values_from = "n_votes")
