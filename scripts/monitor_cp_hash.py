@@ -100,6 +100,7 @@ def main(params):
       logging.info('======================================================')
       logging.info("Se agregaron: {}".format(",".join(added)))
       print("Se agregaron: ", ",".join(added))
+      time.sleep(2.0)
       # use last one even or not
       if len(added) >=1:
           if is_even > 0:
