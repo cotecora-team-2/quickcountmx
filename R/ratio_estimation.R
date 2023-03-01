@@ -42,8 +42,6 @@
 ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties,
                              std_errors = TRUE, B = 50, seed = NA){
 
-  parties_enquo <- enquo(parties)
-  party_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
   data_stratum <- data_stratum %>%
     rename(strata = {{ stratum }}, n_strata = {{ n_stratum }})
 
@@ -91,7 +89,7 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
   if (std_errors == TRUE) {
     ratios_sd <- sd_ratio_estimation(data_tbl = data_tbl,
                                      data_stratum = data_stratum,
-                                     B = B, parties = parties)
+                                     B = B, parties = {{ parties }})
     ratios <- left_join(ratios, ratios_sd, by = "party") %>%
       arrange(desc(prop))
   }
@@ -101,7 +99,7 @@ sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
   # B bootstrap replicates
   ratio_reps <- purrr::rerun(B,
       sd_ratio_estimation_aux(data_tbl = data_tbl,
-                              data_stratum = data_stratum, parties = parties))
+                              data_stratum = data_stratum, parties = {{ parties }}))
   std_errors <- bind_rows(ratio_reps) %>%
     group_by(party) %>%
     summarise(std_error = stats::sd(prop), .groups = "drop")
@@ -109,16 +107,12 @@ sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
 }
 # auxiliary function, bootstrap samples of the data and computes ratio estimator
 sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties){
-  # parties_enquo <- enquo(parties)
-  # party_select <- tidyselect::eval_select(parties_enquo, data = data_tbl)
   sample_boot <- select_sample_prop(data_tbl, stratum = strata, frac = 1,
                                     replace = TRUE)
-  # ratio_estimation(data_tbl = sample_boot %>% dplyr::select(-n_strata),
-  #                  stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
-  #                  parties = party_select, std_errors = FALSE)
   ratio_estimation(data_tbl = sample_boot %>% dplyr::select(-n_strata),
                    stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
-                   parties = parties, std_errors = FALSE)
+                   parties = {{ parties }}, std_errors = FALSE)
+
 }
 # auxiliary function, to collapse strata
 collapse_strata <- function(data_tbl, data_stratum){
