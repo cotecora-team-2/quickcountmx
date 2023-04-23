@@ -29,7 +29,7 @@ get_df <- function(edo_id){
     x <- as.character(x)
     nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
   }
-    candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2021.csv") %>%
+    candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2023.csv") %>%
         filter(ID_ESTADO == as.numeric(edo_id)) #%>%
     #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
     lista_candidatos <- candidatos$CANDIDATO %>% unique()

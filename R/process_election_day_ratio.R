@@ -67,7 +67,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
     filter(ID_ESTADO == as.numeric(estado_str)) %>%
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2021.csv") %>%
+  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2023.csv") %>%
     filter(ID_ESTADO == as.numeric(estado_str))
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
