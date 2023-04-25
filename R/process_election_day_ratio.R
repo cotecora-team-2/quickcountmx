@@ -63,7 +63,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   table_frame <- readr::read_rds("data-raw/marco_2023_sim1.rds")
   table_frame <- table_frame %>%
     ungroup() %>%
-    mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, 1200, LISTA_NOMINAL_CASILLA)) %>%
+    mutate(ln = ifelse(LISTA_NOMINAL==0, 1200, LISTA_NOMINAL)) %>%
     filter(ID_ESTADO == as.numeric(estado_str)) %>%
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 

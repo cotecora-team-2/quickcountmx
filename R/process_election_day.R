@@ -93,7 +93,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     filter(ID_ESTADO == as.numeric(estado_str)) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2022.csv") |>
+  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2023.csv") |>
     filter(ID_ESTADO == as.numeric(estado_str)) #%>%
 #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
@@ -161,17 +161,22 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
 
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
     filter(ID_ESTADO == as.numeric(estado_str))
-  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
+  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.99, n_muestra_m/n_t_muestra$n)
 
   # run model ###################
+  if(dplyr::n_distinct(table_frame$cambio_horario) == 1) {
+    covariates <- c("seccion_urbana")
+  } else {
+    covariates <- c("seccion_urbana", "cambio_horario")
+  }
   fit_time <- system.time(
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos), prop_obs = prop_obs,
-                          model = "mlogit-corr",
-                          covariates = all_of(c("seccion_no_urbana")), num_iter = as.numeric(n_iter),
+                          model = "model_parties_mlogit_corr.stan",
+                          covariates = all_of(covariates), num_iter = as.numeric(n_iter),
                           nominal_max = as.numeric(nominal_max),
-                         chains = as.numeric(n_chains), seed = as.numeric(seed))
+                          chains = as.numeric(n_chains), seed = as.numeric(seed))
   )
   print(fit_time)
   if(even == "0") m <- 1
