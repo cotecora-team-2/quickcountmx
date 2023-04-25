@@ -60,7 +60,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_rds("data-raw/marco_2021.rds")
+  table_frame <- readr::read_rds("data-raw/marco_2023_sim1.rds")
   table_frame <- table_frame %>%
     ungroup() %>%
     mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, 1200, LISTA_NOMINAL_CASILLA)) %>%
