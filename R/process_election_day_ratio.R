@@ -84,7 +84,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
   # do processing ########
-  muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
+  muestra_m <- left_join(data_in, table_frame) %>%
     mutate(estrato = as.character(estrato))
   data_stratum_tbl <- table_frame %>%
     filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
