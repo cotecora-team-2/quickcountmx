@@ -21,6 +21,10 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
     R = R ) %>%
     relocate(c(EQ,EN,R), .before = everything()) %>%
     relocate(c(PART,LMU), .after = last_col())
+  if(tab_candidatos$EN[1] == "05"){
+    tab_candidatos <- tab_candidatos |>
+      select(EQ, EN, R, MJS, ELPR, RMB, AGT, PART, LMU)
+  }
 
   prop_obs_str <- format(prop_obs,digits=3)
   #tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(as.numeric(prop_obs_str)*100))
@@ -71,7 +75,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @param n_warmup numer of stan warmup iterations
 #' @param n_chains number of stan chains
 #' @param nominal_max maximum number of votes in special stations
-#' @param seed random seed 
+#' @param seed random seed
 #' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day
@@ -106,7 +110,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0"))) 
+                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
   logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
