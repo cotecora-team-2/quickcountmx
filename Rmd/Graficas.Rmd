@@ -5,135 +5,69 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 ```
 
 ```{r,echo=FALSE,message=FALSE}
-reescalar <- TRUE
-is_median_ylim <- FALSE
+candidatos <- read_csv("../data-raw/estados_candidatos_partidos_2023.csv") |>
+  mutate(CANDIDATO = ifelse(PARTIDO == "NULOS", "NULOS", CANDIDATO)) |>
+  mutate(CANDIDATO = ifelse(PARTIDO == "CNR", "CNR", CANDIDATO))
 ```
 
-```{r, echo=FALSE,message=FALSE}
-library(tidyverse)
-get_ylim <- function(df,is_median) {
-  if(is_median)
-    max((df %>% group_by(candidato) %>% summarise(m = median(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
-  else
-    max((df %>% group_by(candidato) %>% summarise(m = max(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
+```{r, warning=FALSE, include=FALSE}
+ruta_buzon <- "/workspaces/docker-conteo-2023/servidorine/buzon/"
+get_df <- function(edo_no, edo_nombre){
+  get_fdate <- function(x){
+    x <- as.character(x)
+    nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
+  }
+    cands <- candidatos |> filter(ID_ESTADO == edo_no, !CANDIDATO %in% c("NULOS", "CNR")) |>
+      pull(CANDIDATO) |> 
+      unique()
+    archivos <- list.files(paste0(ruta_buzon, edo_nombre), pattern = "*csv")
+    romero_archivos <- paste0(ruta_buzon, edo_nombre, "/", archivos[grepl("romero", archivos, fixed = TRUE)])
+    ortiz_archivos <- paste0(ruta_buzon, edo_nombre, "/", archivos[grepl("ortiz", archivos, fixed = TRUE)])
+    rodriguez_archivos <- paste0(ruta_buzon, edo_nombre, "/", archivos[grepl("rodriguez", archivos, fixed = TRUE)])
+    romero <-  map_df(romero_archivos, ~ read_csv(.) |>
+                     mutate_at(vars(EN), ~as.character(.)) |>
+                     mutate(method="romero"))
+    ortiz <-  map_df(ortiz_archivos, ~ read_csv(.) |>
+                     mutate_at(vars(EN), ~as.character(.)) |>
+                     mutate(method="ortiz"))
+    rodriguez <-  map_df(rodriguez_archivos, ~ read_csv(.) |>
+                     mutate_at(vars(EN), ~as.character(.)) |>
+                     mutate(method="rodriguez"))
+    df <- do.call("rbind", list(romero, ortiz, rodriguez)) |>
+      pivot_longer(cols = all_of(c(cands, "PART")), names_to = "candidato", values_to = "porcentaje") |>
+      rename(fecha = R) |>
+      mutate_at(vars(fecha), get_fdate) |>
+      mutate(LMU = dplyr::case_when(
+        LMU == 0 ~ "inf",
+        LMU == 1 ~ "median",
+        LMU == 2 ~ "sup")) |>
+      group_by(EQ, EN, fecha) |>
+      pivot_wider(names_from = LMU, values_from = porcentaje) 
+    df
+}
+df_coah <- get_df(5, "coah")
+df_mex <- get_df(15, "mex")
+```
+
+```{r, echo=FALSE, fig.width = 8, eval = TRUE}
+plotDF_edo <- function(df, edo_nombre){
+  ggplot(df, aes(fecha, median)) +
+    geom_line(aes(group = candidato)) +
+    geom_ribbon(aes(ymin = inf, ymax = sup, fill = candidato)) +
+    facet_wrap(~method) +
+    xlab("Hora") +
+    ylab("Porcentaje") +
+    labs(subtitle = paste("Votacion para gobernador de", edo_nombre)) +
+    theme(legend.position="bottom")
 }
 
-path_buzon2 <- "/home/rstudio/workspace/cotecora_s14/buzon2/"
-estimaciones_files <- list.files(paste0(path_buzon2,"estimaciones"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-razon_files <- list.files(paste0(path_buzon2,"razon"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-pctpropobs_files <- list.files(paste0(path_buzon2,"pctpropobs"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-multi_files <- estimaciones_files[grepl("ortizm|anzarut",estimaciones_files,fixed = FALSE)]
-mendoza_files <- estimaciones_files[grepl("mendoza",estimaciones_files,fixed = TRUE)]
-compulsado_files <- estimaciones_files[grepl("compulsado",estimaciones_files,fixed = TRUE)]
-```
-
-```{r, echo=FALSE,message=FALSE}
-
-get_df <- function(edo_id){
-    out <- tryCatch(
-        {
-          get_fdate <- function(x){
-            x <- as.character(x)
-            nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
-           }
-          candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2023.csv") %>%
-            filter(ID_ESTADO == as.numeric(edo_id)) #%>%
-    #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
-          lista_candidatos <- candidatos$CANDIDATO %>% unique()
-          lista_candidatos <- lista_candidatos[!grepl("OTROS", lista_candidatos, fixed = TRUE)]
-          lista_candidatos <- append(lista_candidatos,"PART")
-
-          file_edos <- substr(multi_files, nchar(multi_files) - 11,nchar(multi_files) - 10)
-          multi_df <- multi_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.) %>%
-                                                              mutate_at(vars(EN), ~
-                                                                          as.character(.)) %>%
-                                                              mutate(method="multi"))
-          file_edos <- substr(mendoza_files, nchar(mendoza_files) - 11,nchar(mendoza_files) - 10)
-          mendoza_df <- mendoza_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
-                                                              mutate(method="mendoza"))
-          file_edos <- substr(razon_files, nchar(razon_files) - 11,nchar(razon_files) - 10)
-          razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
-                                                              mutate(PART=as.numeric(""))  %>%
-                                                              mutate(method="razon")
-          file_edos <- substr(pctpropobs_files, nchar(pctpropobs_files) - 5,nchar(pctpropobs_files) - 4)
-          pctpropobs_df <- pctpropobs_files[file_edos == edo_id] %>% map_df(., ~ read_csv(., col_names = c("EN","R","pctpropobs"),col_types = "cdd")) 
-          file_edos <- substr(compulsado_files, nchar(compulsado_files) - 11,nchar(compulsado_files) - 10)
-          compulsado_df <- compulsado_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
-                                                              mutate(method="compulsado") %>%
-                                                                select(-ESTRATOS,-EST_REC,-TOT_CAS,-CAS_REC,-PORCENTAJE))
-          df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
-          df <- df %>%
-            ungroup() %>%
-            left_join(pctpropobs_df, by=c("EN","R")) %>%
-            tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
-                 values_to = "porcentaje") %>%
-            rename(fecha = R) %>%
-            mutate_at(vars(fecha), get_fdate) %>%
-            select(-EQ) %>%
-            unique() %>%
-            group_by(EN,fecha,pctpropobs) %>%
-            mutate(LMU = dplyr::case_when(
-            LMU == 0 ~ "inf",
-            LMU == 1 ~ "median",
-            LMU == 2 ~ "sup")) %>%
-            tidyr::pivot_wider(names_from = LMU, values_from = porcentaje) 
-
-          df
-        },
-        error=function(cond) {
-            message(paste("No hay datos para",edo_id))
-            message(cond)
-            return(NA)
-        }
-    )    
-    return(out)
-}
-
-df6 <- get_df("06")
-df8 <- get_df("08")
-df16 <- get_df("16")
-df18 <- get_df("18")
-df32 <- get_df("32")
-
+plotDF_edo(df_coah, "Coahuila")
+plotDF_edo(df_mex, "Mexico")
 ```
 
 
-```{r, echo=TRUE,fig.width=10}
-plotDF_edo <- function(df,edo_str) {
-    out <- tryCatch(
-        {
-          limite <- ifelse(reescalar, get_ylim(df,is_median_ylim), 100)
-          ann_text<-data.frame(fecha=df$fecha,
-                               y=rep(limite ,nrow(df)),
-                               candidato=df$candidato,
-                               label=substr(as.character(signif(df$pctpropobs,digits=2)),1,3))
-          ann_text <- ann_text %>% mutate(label=ifelse(as.numeric(substr(as.character(fecha),15,16)) %% 15, "",label)) %>% mutate(label=ifelse(label=="NA","",label))
-          ggplot(df, aes(fecha,median, color=factor(candidato))) +
-            geom_line(aes(group = candidato)) +
-            geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-            ylim(0,limite) +
-            facet_wrap(~method, nrow=1) +
-            xlab("Hora") +
-            ylab("Porcentaje") +
-            labs(subtitle = paste("Votacion para gobernador de",edo_str)) +
-            theme(legend.position="bottom") +
-            geom_text(data = ann_text,aes(x=fecha,y=y,label=label), size = 3, alpha = 0.1, inherit.aes = FALSE)
-        },
-        error=function(cond) {
-            message(paste("No hay datos para",edo_str))
-            message(cond)
-            return(NA)
-        }
-    )    
-    return(out)
-}
 
-plotDF_edo(df6,"Colima")
-plotDF_edo(df8,"Chihuahua")
-plotDF_edo(df16,"Michoacan")
-plotDF_edo(df18,"Nayarit")
-plotDF_edo(df32,"Zacatecas")
-```
