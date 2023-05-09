@@ -82,7 +82,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @export
 process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
                           team = "default", even="0", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1200, seed=221285){
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1000, seed=221285){
   logger::log_appender(logger::appender_file(log_file))
   logger::log_layout(logger::layout_glue_colors)
   logger::log_threshold(logger::TRACE)
