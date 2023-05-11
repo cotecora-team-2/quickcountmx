@@ -90,7 +90,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_rds("data-raw/marco_2023_sim1.rds")
+  table_frame <- readr::read_rds("data-raw/marco_2023.rds")
   table_frame <- table_frame |>
     ungroup() |>
     mutate(ln = ifelse(LISTA_NOMINAL==0, as.numeric(nominal_max), LISTA_NOMINAL)) |>
