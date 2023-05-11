@@ -1,5 +1,5 @@
 write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n_estratos, tot_casillas, n_casillas,
-                          path_out){
+                                path_out){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -25,19 +25,19 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
     relocate(c(LMU), .after = last_col())
 
 
-#  tab_compulsados <- tab_candidatos %>%
-#    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
-#           EST_REC = ifelse(LMU == 0,n_estratos,""),
-#           TOT_CAS = ifelse(LMU == 0,tot_casillas,""),
-#           CAS_REC = ifelse(LMU == 0,n_casillas,""),
-#           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
+  #  tab_compulsados <- tab_candidatos %>%
+  #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
+  #           EST_REC = ifelse(LMU == 0,n_estratos,""),
+  #           TOT_CAS = ifelse(LMU == 0,tot_casillas,""),
+  #           CAS_REC = ifelse(LMU == 0,n_casillas,""),
+  #           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
 
 
 
   readr::write_csv(tab_candidatos, paste0(path_out, "/", 'razon',
-                                               EN, R, ".csv"))
-#  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
-#                                                 EN, R, ".csv"))
+                                          EN, R, ".csv"))
+  #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
+  #                                                 EN, R, ".csv"))
 }
 
 #' Automatically process batch of new data, and write estimates in correct
@@ -55,7 +55,7 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
 #' @rdname process_batch_election_day
 #' @export
 ratio_process_batch <- function(path_name, file_name, path_out, B,
-                          team = "default"){
+                                team = "default"){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
@@ -73,18 +73,21 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1) %>%
-#    mutate(ID_ESTADO = iD_ESTADO) %>%
+    #    mutate(ID_ESTADO = iD_ESTADO) %>%
     mutate(OTROS = CNR + NULOS) %>%
     mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
                                   stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) %>%
-    filter(TOTAL > 0)
+    filter(TOTAL > 0) |>
+    select(-c(ID_ESTADO, ID_DISTRITO_FEDERAL,
+              SECCION, TIPO_CASILLA, EXT_CONTIGUA, TIPO_SECCION,
+              LISTA_NOMINAL, ID_MUNICIPIO, ID_DIST_LOC, ID_ESTRATO))
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
   # do processing ########
-  muestra_m <- left_join(data_in, table_frame) %>%
+  muestra_m <- left_join(data_in, table_frame, by = "CLAVE_CASILLA") %>%
     mutate(estrato = as.character(estrato))
   data_stratum_tbl <- table_frame %>%
     filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
@@ -98,8 +101,8 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   # run model ###################
   fit_time <- system.time(
     ratios <- ratio_estimation(muestra_m, stratum = estrato, n_stratum = n,
-                            data_stratum = data_stratum_tbl,
-                            parties = all_of(lista_candidatos), B = as.numeric(B))
+                               data_stratum = data_stratum_tbl,
+                               parties = all_of(lista_candidatos), B = as.numeric(B))
   )
   print(fit_time)
   print(ratios)
@@ -107,7 +110,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   n_muestra_m <- nrow(muestra_m)
 
   write_results_ratio(df = ratios, file_name = file_name,
-                team = team, n_muestra = n_muestra_m, #tot_estratos = tot_estratos, n_estratos = n_estratos,
-                #tot_casillas, n_casillas,
-                path_out = path_out)
+                      team = team, n_muestra = n_muestra_m, #tot_estratos = tot_estratos, n_estratos = n_estratos,
+                      #tot_casillas, n_casillas,
+                      path_out = path_out)
 }
