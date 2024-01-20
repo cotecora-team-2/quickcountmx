@@ -19,7 +19,7 @@ hb_estimation(
   adapt_delta = 0.8,
   max_treedepth = 10,
   chains = 3,
-  model = "mlogit",
+  model = "mlogit-corr",
   nominal_max = 1200
 )
 }
