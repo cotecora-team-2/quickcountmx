@@ -97,9 +97,9 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
 }
 sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
   # B bootstrap replicates
-  ratio_reps <- purrr::rerun(B,
+  ratio_reps <- purrr::map(1:B, function(b){
       sd_ratio_estimation_aux(data_tbl = data_tbl,
-                              data_stratum = data_stratum, parties = {{ parties }}))
+                              data_stratum = data_stratum, parties = {{ parties }})})
   std_errors <- bind_rows(ratio_reps) %>%
     group_by(party) %>%
     summarise(std_error = stats::sd(prop), .groups = "drop")
