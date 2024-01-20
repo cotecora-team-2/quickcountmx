@@ -59,24 +59,24 @@ select_sample_str <- function(sampling_frame, allocation,
 
   frame_grouped_tbl <- sampling_frame %>%
     group_by({{ stratum }}) %>%
-    nest() %>%
+    tidyr::nest() %>%
     left_join(allocation, by = rlang::as_string(rlang::ensym(stratum)))
 
   if (is_frac) {
     sample_tbl <- frame_grouped_tbl %>%
-      mutate(sample = map2(data, {{ sample_size }},
+      mutate(sample = purrr::map2(data, {{ sample_size }},
              ~ slice_sample(.x, prop = .y, replace = replace))) %>%
       select({{ stratum }}, sample) |>
-      unnest(cols = c(sample))
+      tidyr::unnest(cols = c(sample))
   } else {
     # if sample size not integer we round it
     frame_grouped_tbl <- frame_grouped_tbl %>%
       mutate("{{ sample_size }}" := as.integer(round({{sample_size}})))
     sample_tbl <- frame_grouped_tbl %>%
-      mutate(sample = map2(data, {{ sample_size }},
+      mutate(sample = purrr::map2(data, {{ sample_size }},
              ~ slice_sample(.x, n = .y, replace = replace))) %>%
       select({{ stratum }}, sample) |>
-      unnest(cols = c(sample))
+      tidyr::unnest(cols = c(sample))
   }
 
   sample_tbl <- sample_tbl %>%
