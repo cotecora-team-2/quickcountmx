@@ -73,44 +73,44 @@ We can also work with a time censored sample, simulating arrival times
 data("arrivals_tbl")
 states <- unique(arrivals_tbl$state_abbr)
 model_national <- fit_model(arrivals_tbl, states)
-#sims_national <- simulate_arrivals(1, model_national, new_data_tbl = conteo_2018, hour_censoring = Inf)
+sims_national <- simulate_arrivals(1, model_national, new_data_tbl = conteo_2018, hour_censoring = Inf)
 ```
 
 ```{r}
-#data_tbl <- sims_national %>% left_join(conteo_2018 %>% select(CLAVE_CASILLA, distrito_f, 
-#      any_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "CNR", "VN"))),
-#    by = "CLAVE_CASILLA")
-#data_tbl <- data_tbl %>% left_join(conteo_2018 %>% select(CLAVE_CASILLA, LISTA_NOMINAL))
+data_tbl <- sims_national %>% left_join(conteo_2018 %>% select(CLAVE_CASILLA, distrito_f, 
+      any_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "CNR", "VN"))),
+    by = "CLAVE_CASILLA")
+data_tbl <- data_tbl %>% left_join(conteo_2018 %>% select(CLAVE_CASILLA, LISTA_NOMINAL))
 # select sample
-#sample <- select_sample_prop(data_tbl, stratum = distrito_f, frac = 0.01, seed = 100)
-#nrow(sample)
+sample <- select_sample_prop(data_tbl, stratum = distrito_f, frac = 0.01, seed = 100)
+nrow(sample)
 ```
 
 Full sample estimates:
 
 ```{r}
-#estimates <- ratio_estimation(sample, stratum = distrito_f,
-#                              data_stratum = stratification, n_stratum = n,
-#                              B = 100, seed = 123,
-#                              parties = any_of(c("AMLO", "JAMK", "RAC", 
-#                                                 "CAND_IND_01", "CAND_IND_02" ,
-#                                                 "VN", "CNR")))
-#estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
+estimates <- ratio_estimation(sample, stratum = distrito_f,
+                              data_stratum = stratification, n_stratum = n,
+                              B = 100, seed = 123,
+                              parties = any_of(c("AMLO", "JAMK", "RAC", 
+                                                 "CAND_IND_01", "CAND_IND_02" ,
+                                                 "VN", "CNR")))
+estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 ```
 
 Time censored data:
 
 ```{r}
-# sample_censored <- sample %>% filter(time < 3)
-# nrow(sample_censored)
-# estimates <- ratio_estimation(sample_censored, 
-#                               stratum = distrito_f,
-#                               data_stratum = stratification, n_stratum = n,
-#                               B = 100, seed = 123,
-#                               parties = any_of(c("AMLO", "JAMK", "RAC", 
-#                                                  "CAND_IND_01", "CAND_IND_02" ,
-#                                                  "VN", "CNR")))
-# estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
+sample_censored <- sample %>% filter(time < 3)
+nrow(sample_censored)
+estimates <- ratio_estimation(sample_censored, 
+                              stratum = distrito_f,
+                              data_stratum = stratification, n_stratum = n,
+                              B = 100, seed = 123,
+                              parties = any_of(c("AMLO", "JAMK", "RAC", 
+                                                 "CAND_IND_01", "CAND_IND_02" ,
+                                                 "VN", "CNR")))
+estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 ```
 
 

@@ -19,7 +19,6 @@ fit_model <- function(arrivals_tbl, states){
     mutate(ln_log_c = lista_nominal_log - mean(lista_nominal_log))
   formula <- as.formula("survival::Surv(tiempo_huso, status) ~ 1 +
       state_abbr:ln_log_c +
-      ln_log_c:tipo_casilla +
       state_abbr:I(tipo_seccion == 1) +
       tipo_casilla +
       state_abbr:.fittedPC1 +
