@@ -23,9 +23,9 @@ test_that("create data", {
                              parties = cand_1:otro,
                              covariates = x1:x_2,
                              prop_obs = 0.9)
-  expect_equal(proc_tbl$N, 9)
+  expect_equal(proc_tbl$N, 8)
   expect_equal(proc_tbl$x,
-               sample_tbl %>% arrange(id_station) %>% select(x1, x_2) %>% as.matrix)
+               sample_tbl %>% arrange(id_station) %>% ungroup() %>% select(x1, x_2) %>% as.matrix)
 })
 
 

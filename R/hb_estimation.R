@@ -40,7 +40,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
-                          chains = 3, model = "mlogit", nominal_max = 1200){
+                          chains = 3, model = "mlogit-corr", nominal_max = 1200){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -67,7 +67,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   stan_data$parties_name <- NULL
   # Compile model
   if(model == "mlogit"){
-    path <- system.file("stan", "model_parties_mlogit.stan", package = "quickcountmx")
+    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
     adapt_delta <- adapt_delta
     max_treedepth <- max_treedepth
     iter_warmup <- num_warmup

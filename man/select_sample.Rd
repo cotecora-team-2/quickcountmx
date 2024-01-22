@@ -18,8 +18,8 @@ select_sample_prop(
 select_sample_str(
   sampling_frame,
   allocation,
-  sample_size = sample_size,
-  stratum = stratum,
+  sample_size,
+  stratum,
   is_frac = FALSE,
   seed = NA,
   replace = FALSE

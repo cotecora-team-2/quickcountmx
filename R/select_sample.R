@@ -35,12 +35,15 @@ select_sample_prop <- function(sampling_frame, stratum = stratum, frac,
                                seed = NA, replace = FALSE, min_stratum = 0){
   if (!is.na(seed)) set.seed(seed)
   if (missing(stratum)) {
-    sample <- sample_frac(sampling_frame, size = frac, replace = replace)
+    sample <- slice_sample(sampling_frame, prop = frac, replace = replace)
   } else {
-    sample <- sampling_frame %>%
+    allocation_tbl <- sampling_frame %>%
       group_by({{ stratum }}) %>%
-      sample_frac(size = max(frac, min_stratum / n()), replace = replace) %>%
-      ungroup()
+      summarize(prop = max(frac, min_stratum / n()))
+    sample <- select_sample_str(sampling_frame, allocation_tbl,
+                                sample_size = prop, stratum = {{ stratum }},
+                                is_frac = TRUE, seed = seed,
+                                replace = replace)
   }
   return(sample)
 }
@@ -49,25 +52,31 @@ select_sample_prop <- function(sampling_frame, stratum = stratum, frac,
 #' @importFrom rlang :=
 #' @export
 select_sample_str <- function(sampling_frame, allocation,
-                              sample_size = sample_size, stratum = stratum,
+                              sample_size, stratum,
                               is_frac = FALSE, seed = NA,
                               replace = FALSE){
   if (!is.na(seed)) set.seed(seed)
 
-  stratum_var_str <- deparse(substitute(stratum))
   frame_grouped_tbl <- sampling_frame %>%
-    left_join(allocation, by = stratum_var_str) %>%
-    group_by({{ stratum }})
+    group_by({{ stratum }}) %>%
+    tidyr::nest() %>%
+    left_join(allocation, by = rlang::as_string(rlang::ensym(stratum)))
 
   if (is_frac) {
     sample_tbl <- frame_grouped_tbl %>%
-      sample_frac({{ sample_size }}, replace = replace)
+      mutate(sample = purrr::map2(data, {{ sample_size }},
+             ~ slice_sample(.x, prop = .y, replace = replace))) %>%
+      select({{ stratum }}, sample) |>
+      tidyr::unnest(cols = c(sample))
   } else {
     # if sample size not integer we round it
     frame_grouped_tbl <- frame_grouped_tbl %>%
       mutate("{{ sample_size }}" := as.integer(round({{sample_size}})))
     sample_tbl <- frame_grouped_tbl %>%
-      sample_n({{ sample_size }}, replace = replace)
+      mutate(sample = purrr::map2(data, {{ sample_size }},
+             ~ slice_sample(.x, n = .y, replace = replace))) %>%
+      select({{ stratum }}, sample) |>
+      tidyr::unnest(cols = c(sample))
   }
 
   sample_tbl <- sample_tbl %>%
