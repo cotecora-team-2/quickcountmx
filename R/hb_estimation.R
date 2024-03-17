@@ -29,6 +29,8 @@
 #' @param model One of "mlogit" (the default) or "logit"
 #' @param nominal_max Maximum number of nominal count for stations. Used for
 #' stations without fixed nominal list.
+#' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
+#' @param threads_per_chain Number of threads per chain to split calculation of log-posterior
 #' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals.
@@ -40,7 +42,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
-                          chains = 3, model = "mlogit-corr", nominal_max = 1200){
+                          chains = 3, model = "mlogit-corr", nominal_max = 1200,
+                          threads_per_chain = 1, inv_metric = NULL){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -85,24 +88,29 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       iter_warmup <- num_warmup
     }
   }
-  model <- cmdstanr::cmdstan_model(path)
+
+  model <- cmdstanr::cmdstan_model(path, cpp_options = list(stan_threads = TRUE))
   ## fit
+
   fit <- model$sample(data = stan_data,
                       seed = seed,
                       init = 0.01,
                       iter_sampling = num_iter,
                       iter_warmup = num_warmup,
                       chains = chains,
-                      refresh = 200,
+                      refresh = 100,
                       parallel_chains = chains,
                       step_size = 0.01,
                       adapt_delta = adapt_delta,
-                      max_treedepth = max_treedepth)
+                      max_treedepth = max_treedepth,
+                      inv_metric = inv_metric,
+                      threads_per_chain = threads_per_chain)
   output <- list()
   output$fit <- NULL
   if(return_fit == TRUE){
     output$fit <- fit
   }
+  output$inv_metric <- fit$inv_metric()[[1]] |> diag()
   estimates_tbl <- NULL
   estimates_tbl <- fit$summary(variables = c("prop_votos", "participacion"),
                                ~ quantile(.x, probs = c(0.025, 0.5, 0.975)),

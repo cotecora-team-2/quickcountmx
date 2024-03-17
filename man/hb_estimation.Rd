@@ -20,7 +20,9 @@ hb_estimation(
   max_treedepth = 10,
   chains = 3,
   model = "mlogit-corr",
-  nominal_max = 1200
+  nominal_max = 1200,
+  threads_per_chain = 1,
+  inv_metric = NULL
 )
 }
 \arguments{
@@ -62,6 +64,10 @@ generator (optional).}
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
 stations without fixed nominal list.}
+
+\item{threads_per_chain}{Number of threads per chain to split calculation of log-posterior}
+
+\item{inv_metric}{vector of inverse metric diagonal for the model. Default is NULL}
 }
 \value{
 A list with model fit (if return_fit=TRUE) and a \code{tibble}

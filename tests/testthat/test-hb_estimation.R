@@ -43,7 +43,25 @@ test_that("test call", {
   expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
 
+sample_tbl <-
+  select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
+fit <- hb_estimation(sample_tbl, stratum = state,
+                     sampling_frame = test_tbl,
+                     prop_obs = 0.9, seed = 12,
+                     model = "mlogit-corr",
+                     parties = cand_1:otro, covariates = x1:x_2,
+                     num_iter = 200, chains = 1, return_fit = TRUE)
+
 test_that("test call corr", {
+  estimates <- fit$estimates
+  expect_is(estimates, "tbl")
+  expect_equal(nrow(estimates), 4)
+  expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
+})
+
+inv_metric_test <- fit$fit$inv_metric()[[1]] |> diag()
+
+test_that("test call inv metric", {
   sample_tbl <-
     select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
   fit <- hb_estimation(sample_tbl, stratum = state,
@@ -51,7 +69,7 @@ test_that("test call corr", {
                        prop_obs = 0.9, seed = 12,
                        model = "mlogit-corr",
                        parties = cand_1:otro, covariates = x1:x_2,
-                       num_iter = 100, chains = 1)
+                       num_iter = 200, chains = 1, inv_metric = inv_metric_test)
   estimates <- fit$estimates
   expect_is(estimates, "tbl")
   expect_equal(nrow(estimates), 4)
