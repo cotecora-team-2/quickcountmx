@@ -22,7 +22,8 @@ hb_estimation(
   model = "mlogit-corr",
   nominal_max = 1200,
   threads_per_chain = 1,
-  inv_metric = NULL
+  inv_metric = NULL,
+  results_strata = FALSE
 )
 }
 \arguments{
@@ -68,11 +69,14 @@ stations without fixed nominal list.}
 \item{threads_per_chain}{Number of threads per chain to split calculation of log-posterior}
 
 \item{inv_metric}{vector of inverse metric diagonal for the model. Default is NULL}
+
+\item{results_strata}{If TRUE, returns a list with the results for each stratum}
 }
 \value{
 A list with model fit (if return_fit=TRUE), a \code{tibble}
 estimates including point estimates for each party (median)
-and limits of credible intervals, and a vector inv_metric for the model
+and limits of credible intervals, and a vector inv_metric for the model,
+When results_strata=TRUE, there is a component strata_draws.
 }
 \description{
 Compute point estimate and credible intervals for each candidate.
