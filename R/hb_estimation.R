@@ -127,12 +127,13 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
     strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
       as_tibble() |>
       tidyr::pivot_longer(cols = c(contains("strata")), names_to = "variable", values_to = "prop") |>
-      tidyr::separate("variable", into = c("tipo", "estrato", "partido"), sep="[\\[\\,\\]]", extra = "drop") |>
-      select(.draw, tipo, estrato, partido, prop) |>
-      mutate(estrato = as.integer(estrato), partido = as.integer(partido)) |>
+      tidyr::separate("variable", into = c("tipo", "strata_num_f", "partido"), sep="[\\[\\,\\]]", extra = "drop") |>
+      select(.draw, tipo, strata_num_f, partido, prop) |>
+      mutate(strata_num_f= as.integer(strata_num_f), partido = as.integer(partido)) |>
       left_join(tibble(partido = 1: length(parties_name),
                        partido_nom = parties_name,
-                       tipo = "prop_votos_strata"), by = c("partido", "tipo"))
+                       tipo = "prop_votos_strata"), by = c("partido", "tipo")) |>
+      left_join(stan_data$strata_info_tbl, by = c("strata_num_f"))
     output$strata_draws <- strata_draws
   }
 
@@ -144,6 +145,7 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   levels_strata_f <- unique(sampling_frame$strata)
   sampling_frame <- sampling_frame %>%
     mutate(strata_num_f = as.integer(factor(strata, levels = levels_strata_f)))
+  strata_info_tbl <- unique(sampling_frame %>% select(strata, strata_num_f))
   data_tbl <- data_tbl %>%
     mutate(strata_num = as.integer(factor(strata, levels = levels_strata_f)))
   in_sample_na <- sampling_frame %>% select(id_station) %>%
@@ -159,6 +161,7 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   stan_data <- list()
   # frame data
   stan_data$parties_name <- colnames(votes)
+  stan_data$strata_info_tbl <- strata_info_tbl
   stan_data$N_f = nrow(sampling_frame)
   stan_data$n_strata_f = length(levels_strata_f)
   stan_data$p <- ncol(votes_frame_tbl)
