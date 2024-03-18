@@ -70,9 +70,9 @@ stations without fixed nominal list.}
 \item{inv_metric}{vector of inverse metric diagonal for the model. Default is NULL}
 }
 \value{
-A list with model fit (if return_fit=TRUE) and a \code{tibble}
+A list with model fit (if return_fit=TRUE), a \code{tibble}
 estimates including point estimates for each party (median)
-and limits of credible intervals.
+and limits of credible intervals, and a vector inv_metric for the model
 }
 \description{
 Compute point estimate and credible intervals for each candidate.

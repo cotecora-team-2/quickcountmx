@@ -31,9 +31,9 @@
 #' stations without fixed nominal list.
 #' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
 #' @param threads_per_chain Number of threads per chain to split calculation of log-posterior
-#' @return A list with model fit (if return_fit=TRUE) and a \code{tibble}
+#' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
-#'   and limits of credible intervals.
+#'   and limits of credible intervals, and a vector inv_metric for the model
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
