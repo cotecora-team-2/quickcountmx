@@ -31,9 +31,11 @@
 #' stations without fixed nominal list.
 #' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
 #' @param threads_per_chain Number of threads per chain to split calculation of log-posterior
+#' @param results_strata If TRUE, returns a list with the results for each stratum
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
-#'   and limits of credible intervals, and a vector inv_metric for the model
+#'   and limits of credible intervals, and a vector inv_metric for the model,
+#' When results_strata=TRUE, there is a component strata_draws.
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
@@ -43,7 +45,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
                           chains = 3, model = "mlogit-corr", nominal_max = 1200,
-                          threads_per_chain = 1, inv_metric = NULL){
+                          threads_per_chain = 1, inv_metric = NULL, results_strata = FALSE){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -120,6 +122,20 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   estimates_tbl$party <- c(parties_name, "part")
   print(estimates_tbl)
   output$estimates <- estimates_tbl
+
+  if(results_strata){
+    strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
+      as_tibble() |>
+      tidyr::pivot_longer(cols = c(contains("strata")), names_to = "variable", values_to = "prop") |>
+      tidyr::separate("variable", into = c("tipo", "estrato", "partido"), sep="[\\[\\,\\]]", extra = "drop") |>
+      select(.draw, tipo, estrato, partido, prop) |>
+      mutate(estrato = as.integer(estrato), partido = as.integer(partido)) |>
+      left_join(tibble(partido = 1: length(parties_name),
+                       partido_nom = parties_name,
+                       tipo = "prop_votos_strata"), by = c("partido", "tipo"))
+    output$strata_draws <- strata_draws
+  }
+
   return(output)
 }
 
