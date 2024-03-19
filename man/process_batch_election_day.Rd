@@ -21,7 +21,8 @@ process_batch(
   adapt_delta = 0.8,
   max_treedepth = 10,
   nominal_max = 1200,
-  seed = 221285
+  seed = 221285,
+  inv_metric_file = NULL
 )
 
 ratio_process_batch(path_name, file_name, path_out, B, team = "default")
@@ -56,6 +57,8 @@ saved.}
 \item{nominal_max}{maximum number of votes in special stations}
 
 \item{seed}{random seed}
+
+\item{inv_metric_file}{path to file with initial metric}
 
 \item{B}{Number of bootstrap replicates used to compute standard errors,
 defaults to 50.}

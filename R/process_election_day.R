@@ -71,14 +71,16 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @param n_warmup numer of stan warmup iterations
 #' @param n_chains number of stan chains
 #' @param nominal_max maximum number of votes in special stations
-#' @param seed random seed 
+#' @param seed random seed
+#' @param inv_metric_file path to file with initial metric
 #' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day
 #' @export
 process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
                           team = "default", even="0", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1200, seed=221285){
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1200, seed=221285,
+                          inv_metric_file = NULL){
   logger::log_appender(logger::appender_file(log_file))
   logger::log_layout(logger::layout_glue_colors)
   logger::log_threshold(logger::TRACE)
@@ -106,7 +108,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                                   stringr::str_pad(SECCION, 4, pad = "0"),
                                   TIPO_CASILLA,
                                   stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0"))) 
+                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
   logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
@@ -162,7 +164,10 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
     filter(ID_ESTADO == as.numeric(estado_str))
   prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
-
+  if(!is.null(inv_metric)){
+    inv_metric <- readr::read_rds(inv_metric_file)
+    logger::log_info("Metrica inicial leida")
+  }
   # run model ###################
   fit_time <- system.time(
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
@@ -171,7 +176,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                           model = "mlogit-corr",
                           covariates = all_of(c("seccion_no_urbana")), num_iter = as.numeric(n_iter),
                           nominal_max = as.numeric(nominal_max),
-                         chains = as.numeric(n_chains), seed = as.numeric(seed))
+                         chains = as.numeric(n_chains), seed = as.numeric(seed),
+                         threads_per_chain = 1, inv_metric = inv_metric)
   )
   print(fit_time)
   if(even == "0") m <- 1
@@ -185,6 +191,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   else{
     logger::log_fatal("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::FATAL)}")
   }
+  # sobreescribir métrica
+  readr::write_rds(fit$inv_metric, inv_metric_file)
 
   write_results(fit = fit, file_name = file_name,
                 team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
