@@ -35,7 +35,7 @@
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals, and a vector inv_metric for the model,
-#' When results_strata=TRUE, there is a component strata_draws.
+#' When results_strata=TRUE, there is a component strata_draws and another aggregated total_draws.
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
@@ -124,6 +124,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   output$estimates <- estimates_tbl
 
   if(results_strata){
+    # votes by strata
     strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
       as_tibble() |>
       tidyr::pivot_longer(cols = c(contains("strata")), names_to = "variable", values_to = "prop") |>
@@ -135,6 +136,17 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                        tipo = "prop_votos_strata"), by = c("partido", "tipo")) |>
       left_join(stan_data$strata_info_tbl, by = c("strata_num_f"))
     output$strata_draws <- strata_draws
+    # votes total
+    total_draws <- fit$draws(c("prop_votos", "participacion"), format = "df") |>
+      as_tibble() |>
+      tidyr::pivot_longer(cols = contains(c("prop_votos", "participacion")), names_to = "variable", values_to = "prop") |>
+      tidyr::separate("variable", into = c("tipo", "partido"), sep="[\\[\\,\\]]", extra = "drop", fill = "right") |>
+      select(.draw, tipo, partido, prop) |>
+      mutate(partido = as.integer(partido)) |>
+      left_join(tibble(partido = 1: length(parties_name),
+                       partido_nom = parties_name,
+                       tipo = "prop_votos"), by = c("partido", "tipo"))
+    output$total_draws <- total_draws
   }
 
   return(output)
