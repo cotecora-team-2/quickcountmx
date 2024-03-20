@@ -125,12 +125,13 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 
   if(results_strata){
     # votes by strata
-    strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
+
+     strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
       as_tibble() |>
       tidyr::pivot_longer(cols = c(contains("strata")), names_to = "variable", values_to = "prop") |>
       tidyr::separate("variable", into = c("tipo", "id_estrato", "id_partido"), sep="[\\[\\,\\]]", extra = "drop") |>
-      select(.draw, tipo, strata_num_f, partido, prop) |>
-      mutate(strata_num_f= as.integer(strata_num_f), partido = as.integer(partido)) |>
+      select(.draw, tipo, id_estrato, id_partido, prop) |>
+      mutate(id_estrato = as.integer(id_estrato), id_partido = as.integer(id_partido)) |>
       left_join(tibble(id_partido = 1: length(parties_name),
                        partido_nom = parties_name,
                        tipo = "prop_votos_strata"), by = c("id_partido", "tipo")) |>
@@ -141,8 +142,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       as_tibble() |>
       tidyr::pivot_longer(cols = contains(c("prop_votos", "participacion")), names_to = "variable", values_to = "prop") |>
       tidyr::separate("variable", into = c("tipo", "id_partido"), sep="[\\[\\,\\]]", extra = "drop", fill = "right") |>
-      select(.draw, tipo, partido, prop) |>
-      mutate(partido = as.integer(partido)) |>
+      select(.draw, tipo, id_partido, prop) |>
+      mutate(id_partido = as.integer(id_partido)) |>
       left_join(tibble(id_partido = 1: length(parties_name),
                        partido_nom = parties_name,
                        tipo = "prop_votos"), by = c("id_partido", "tipo"))
