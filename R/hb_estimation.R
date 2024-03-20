@@ -128,24 +128,24 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
     strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
       as_tibble() |>
       tidyr::pivot_longer(cols = c(contains("strata")), names_to = "variable", values_to = "prop") |>
-      tidyr::separate("variable", into = c("tipo", "strata_num_f", "partido"), sep="[\\[\\,\\]]", extra = "drop") |>
+      tidyr::separate("variable", into = c("tipo", "id_estrato", "id_partido"), sep="[\\[\\,\\]]", extra = "drop") |>
       select(.draw, tipo, strata_num_f, partido, prop) |>
       mutate(strata_num_f= as.integer(strata_num_f), partido = as.integer(partido)) |>
-      left_join(tibble(partido = 1: length(parties_name),
+      left_join(tibble(id_partido = 1: length(parties_name),
                        partido_nom = parties_name,
-                       tipo = "prop_votos_strata"), by = c("partido", "tipo")) |>
-      left_join(stan_data$strata_info_tbl, by = c("strata_num_f"))
+                       tipo = "prop_votos_strata"), by = c("id_partido", "tipo")) |>
+      left_join(stan_data$strata_info_tbl |> rename(id_estrato = strata_num_f), by = c("id_estrato"))
     output$strata_draws <- strata_draws
     # votes total
     total_draws <- fit$draws(c("prop_votos", "participacion"), format = "df") |>
       as_tibble() |>
       tidyr::pivot_longer(cols = contains(c("prop_votos", "participacion")), names_to = "variable", values_to = "prop") |>
-      tidyr::separate("variable", into = c("tipo", "partido"), sep="[\\[\\,\\]]", extra = "drop", fill = "right") |>
+      tidyr::separate("variable", into = c("tipo", "id_partido"), sep="[\\[\\,\\]]", extra = "drop", fill = "right") |>
       select(.draw, tipo, partido, prop) |>
       mutate(partido = as.integer(partido)) |>
-      left_join(tibble(partido = 1: length(parties_name),
+      left_join(tibble(id_partido = 1: length(parties_name),
                        partido_nom = parties_name,
-                       tipo = "prop_votos"), by = c("partido", "tipo"))
+                       tipo = "prop_votos"), by = c("id_partido", "tipo"))
     output$total_draws <- total_draws
   }
 
