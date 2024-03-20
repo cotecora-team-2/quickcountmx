@@ -135,7 +135,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       left_join(tibble(id_partido = 1: length(parties_name),
                        partido_nom = parties_name,
                        tipo = "prop_votos_strata"), by = c("id_partido", "tipo")) |>
-      left_join(stan_data$strata_info_tbl |> rename(id_estrato = strata_num_f), by = c("id_estrato"))
+      left_join(stan_data$strata_info_tbl |> rename(id_estrato = strata_num_f), by = c("id_estrato")) |>
+      rename(sims = .draw)
     output$strata_draws <- strata_draws
     # votes total
     total_draws <- fit$draws(c("prop_votos", "participacion"), format = "df") |>
@@ -146,7 +147,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       mutate(id_partido = as.integer(id_partido)) |>
       left_join(tibble(id_partido = 1: length(parties_name),
                        partido_nom = parties_name,
-                       tipo = "prop_votos"), by = c("id_partido", "tipo"))
+                       tipo = "prop_votos"), by = c("id_partido", "tipo")) |>
+      rename(sims = .draw)
     output$total_draws <- total_draws
   }
 
