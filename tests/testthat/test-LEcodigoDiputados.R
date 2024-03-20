@@ -1,7 +1,7 @@
 #### Primer intento de reescribir codigo de LE en funciones
 ### Este test replica el codigo de LE y checa que las funciones den los resultados esperados
 
-library(tidyverse)
+#library(tidyverse)
 source("./R/fns_codigo_diputados.R")
 
 ## crear un archivo con Keys para partidos y coaliciones
