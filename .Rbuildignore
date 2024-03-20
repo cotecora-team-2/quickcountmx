@@ -7,3 +7,5 @@ LICENSE.md
 Rmd/
 scripts/
 _vars
+-vignette/hb-estimation.Rmd
+-vignette/ratio-estimation.Rmd
