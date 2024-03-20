@@ -76,7 +76,7 @@ stations without fixed nominal list.}
 A list with model fit (if return_fit=TRUE), a \code{tibble}
 estimates including point estimates for each party (median)
 and limits of credible intervals, and a vector inv_metric for the model,
-When results_strata=TRUE, there is a component strata_draws.
+When results_strata=TRUE, there is a component strata_draws and another aggregated total_draws.
 }
 \description{
 Compute point estimate and credible intervals for each candidate.
