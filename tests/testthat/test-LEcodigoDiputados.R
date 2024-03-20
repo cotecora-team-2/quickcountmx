@@ -37,7 +37,7 @@ theta_long <- readr::read_rds(testthat::test_path(dir,paste0("theta_melt_10_",id
 info<-read.csv(testthat::test_path(dir,"Info_distritos_2021.txt"))
 #Info coaliciones
 #coa<-read.csv("./data-raw/diputados_LE/2021_Diputados_coaliciones.csv")
-coa<-read.csv(testthat::test_path(dir,"2021_Diputados_coaliciones.csv"))
+coa<-read.csv(testthat::test_path(dir,"2021_Diputados_Coaliciones.csv"))
 ## reformatear coa
 coa_long <- coa |>
   left_join(info|> select(ID_ENTIDAD = ID_ESTADO, DISTRITO = ID_DISTRITO,id_estrato =ID_ESTRATO)) |>
