@@ -120,7 +120,8 @@ transformed parameters {
 
 model {
   for(k in 1:(p-1)){
-      to_vector(beta_0[k]) ~ normal(0, 2);
+      beta_0[k][1] ~ normal(0, 3);
+      to_vector(beta_0[k][2:(n_covariates_f + 1)]) ~ normal(0, 0.5);
   }
   to_vector(beta_0_part_prop) ~ std_normal();
   to_vector(beta_part_prop_raw) ~ std_normal();
@@ -129,8 +130,8 @@ model {
 
   for(k in 1:(p-1)){
     to_vector(beta_raw[k]) ~ std_normal();
-    sigma[k][1] ~ std_normal();
-    sigma[k][2:(n_covariates_f + 1)] ~ std_normal();
+    sigma[k][1] ~ normal(0, 2);
+    sigma[k][2:(n_covariates_f + 1)] ~ normal(0, 0.25);
     Omega[k] ~ lkj_corr_cholesky(2);
   }
 
