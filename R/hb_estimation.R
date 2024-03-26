@@ -37,7 +37,8 @@
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
-hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties,
+hb_estimation <- function(data_tbl, stratum, region = NULL,
+                          id_station, sampling_frame, parties,
                           covariates,
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
@@ -54,6 +55,14 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
     rename(strata = {{ stratum }}) %>%
     rename(id_station = {{ id_station }})
 
+  #if(!is.null(region)){
+    sampling_frame <- sampling_frame %>%
+      rename(region = {{ region }})
+    data_tbl <- data_tbl %>%
+      ungroup() %>%
+      rename(region = {{ region }})
+  #}
+
   # Prepare data for stan model
   if(model == "mlogit"){
     json_path <- system.file("stan", "prior_data.json", package = "quickcountmx")
@@ -69,7 +78,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   parties_name <- stan_data$parties_name
   stan_data$parties_name <- NULL
   # Compile model
-  if(model == "mlogit"){
+  if(model == "mlogit-corr"){
     path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
     adapt_delta <- adapt_delta
     max_treedepth <- max_treedepth
@@ -82,13 +91,19 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       iter_warmup <- num_warmup
     }
     else {
+    if(model == "mlogit-region"){
+        path <- system.file("stan", "model_parties_mlogit_corr_region.stan", package = "quickcountmx")
+        adapt_delta <- adapt_delta
+        max_treedepth <- max_treedepth
+        iter_warmup <- num_warmup
+      } else {
       path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
       adapt_delta <- adapt_delta
       max_treedepth <- max_treedepth
       iter_warmup <- num_warmup
     }
   }
-
+  }
   model <- cmdstanr::cmdstan_model(path, cpp_options = list(stan_threads = TRUE))
   ## fit
 
@@ -160,6 +175,25 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   stan_data$stratum <- stan_data$stratum_f[in_sample == 1]
   stan_data$n <- stan_data$n_f[in_sample == 1]
   stan_data$p_obs <- prop_obs
+
+  # region data
+  if("region" %in% names(data_tbl)){
+    levels_region_f <- unique(sampling_frame$region)
+    sampling_frame <- sampling_frame %>%
+      mutate(region_f = as.integer(factor(region, levels = levels_region_f)))
+    data_tbl <- data_tbl %>%
+      mutate(region = as.integer(factor(region, levels = levels_region_f)))
+    stan_data$n_regions_f <- length(unique(sampling_frame$region_f))
+    stan_data$n_strata_reg <- sampling_frame %>% group_by(region_f) %>%
+      summarise(n_strata_reg = n_distinct(strata_num_f)) %>%
+      pull(n_strata_reg)
+    indices_tbl <- sampling_frame %>% select(region_f, strata_num_f) %>%
+      distinct() %>% group_by(region_f) |>
+      summarise(stratum_inicial = min(strata_num_f),
+                stratum_final = max(strata_num_f))
+    stan_data$stratum_inicial <- indices_tbl$stratum_inicial
+    stan_data$stratum_final <- indices_tbl$stratum_final
+  }
 
   return(stan_data)
 }

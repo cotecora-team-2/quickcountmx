@@ -8,7 +8,8 @@ test_tbl <- dplyr::tibble(
   ln = rep(50, 29),
   x1 = rnorm(29), x_2 = rnorm(29),
   cand_1 = rep(5, 29), cand_2 = rep(10, 29), otro = rep(1, 29)
-) %>% dplyr::mutate(total = cand_1 + cand_2 + otro)
+) %>% dplyr::mutate(total = cand_1 + cand_2 + otro) %>%
+  dplyr::mutate(region_s = ifelse(state %in% c("A", "B"), "1", "2"))
 
 data_stratum <- test_tbl %>%
   dplyr::group_by(state) %>%
@@ -74,4 +75,20 @@ test_that("test call inv metric", {
   expect_is(estimates, "tbl")
   expect_equal(nrow(estimates), 4)
   expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
+})
+
+test_that("test call region model", {
+  test_reg_tbl <- test_tbl |> rename(region = region_s)
+  sample_tbl <-
+    select_sample_prop(test_reg_tbl, stratum = state, frac = 0.3, seed = 912)
+  fit <- hb_estimation(sample_tbl, stratum = state, region = region,
+                       sampling_frame = test_reg_tbl,
+                       prop_obs = 0.9, seed = 12,
+                       model = "mlogit-region", return_fit = TRUE,
+                       parties = cand_1:otro, covariates = x1:x_2,
+                       num_iter = 200, chains = 3, inv_metric = NULL)
+  estimates <- fit$estimates
+  expect_is(estimates, "tbl")
+  expect_equal(nrow(estimates), 4)
+  #expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
