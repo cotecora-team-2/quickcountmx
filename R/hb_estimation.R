@@ -15,6 +15,7 @@
 #'   \code{data_tbl}) and covariates.
 #' @param parties Unquoted variables indicating the number of votes in each polling
 #'   station for each candidate.
+#' @param region Unquoted variable indicating the region grouping strata (NULL by default)
 #' @param covariates Unquoted variables indicating the covariates in each polling
 #'   station.
 #' @param prop_obs Proportion of size of observed sample to total designed sample.
