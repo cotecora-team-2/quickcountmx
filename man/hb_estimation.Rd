@@ -7,6 +7,7 @@
 hb_estimation(
   data_tbl,
   stratum,
+  region = NULL,
   id_station,
   sampling_frame,
   parties,
@@ -30,6 +31,8 @@ hb_estimation(
 
 \item{stratum}{Unquoted variable indicating the stratum for each polling
 station.}
+
+\item{region}{Unquoted variable indicating the region grouping strata (NULL by default)}
 
 \item{id_station}{Unquoted variable indicating the id for each polling
 station.}
