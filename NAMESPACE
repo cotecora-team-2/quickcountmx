@@ -2,6 +2,7 @@
 
 export(fit_model)
 export(hb_estimation)
+export(hb_estimation_parallel)
 export(process_batch)
 export(ratio_estimation)
 export(ratio_process_batch)
