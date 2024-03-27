@@ -31,9 +31,11 @@
 #' stations without fixed nominal list.
 #' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
 #' @param threads_per_chain Number of threads per chain to split calculation of log-posterior
+#' @param results_strata If TRUE, returns a list with the results for each stratum
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
-#'   and limits of credible intervals, and a vector inv_metric for the model
+#'   and limits of credible intervals, and a vector inv_metric for the model,
+#' When results_strata=TRUE, there is a component strata_draws and another aggregated total_draws.
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
@@ -43,7 +45,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10,
                           chains = 3, model = "mlogit-corr", nominal_max = 1200,
-                          threads_per_chain = 1, inv_metric = NULL){
+                          threads_per_chain = 1, inv_metric = NULL, results_strata = FALSE){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -120,6 +122,36 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   estimates_tbl$party <- c(parties_name, "part")
   print(estimates_tbl)
   output$estimates <- estimates_tbl
+
+  if(results_strata){
+    # votes by strata
+
+     strata_draws <- fit$draws(c("prop_votos_strata", "participacion_strata"), format = "df") |>
+      as_tibble() |>
+      tidyr::pivot_longer(cols = c(contains("strata")), names_to = "variable", values_to = "prop") |>
+      tidyr::separate("variable", into = c("tipo", "id_estrato", "id_partido"), sep="[\\[\\,\\]]", extra = "drop") |>
+      select(.draw, tipo, id_estrato, id_partido, prop) |>
+      mutate(id_estrato = as.integer(id_estrato), id_partido = as.integer(id_partido)) |>
+      left_join(tibble(id_partido = 1: length(parties_name),
+                       partido_nom = parties_name,
+                       tipo = "prop_votos_strata"), by = c("id_partido", "tipo")) |>
+      left_join(stan_data$strata_info_tbl |> rename(id_estrato = strata_num_f), by = c("id_estrato")) |>
+      rename(sims = .draw)
+    output$strata_draws <- strata_draws
+    # votes total
+    total_draws <- fit$draws(c("prop_votos", "participacion"), format = "df") |>
+      as_tibble() |>
+      tidyr::pivot_longer(cols = contains(c("prop_votos", "participacion")), names_to = "variable", values_to = "prop") |>
+      tidyr::separate("variable", into = c("tipo", "id_partido"), sep="[\\[\\,\\]]", extra = "drop", fill = "right") |>
+      select(.draw, tipo, id_partido, prop) |>
+      mutate(id_partido = as.integer(id_partido)) |>
+      left_join(tibble(id_partido = 1: length(parties_name),
+                       partido_nom = parties_name,
+                       tipo = "prop_votos"), by = c("id_partido", "tipo")) |>
+      rename(sims = .draw)
+    output$total_draws <- total_draws
+  }
+
   return(output)
 }
 
@@ -128,6 +160,7 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   levels_strata_f <- unique(sampling_frame$strata)
   sampling_frame <- sampling_frame %>%
     mutate(strata_num_f = as.integer(factor(strata, levels = levels_strata_f)))
+  strata_info_tbl <- unique(sampling_frame %>% select(strata, strata_num_f))
   data_tbl <- data_tbl %>%
     mutate(strata_num = as.integer(factor(strata, levels = levels_strata_f)))
   in_sample_na <- sampling_frame %>% select(id_station) %>%
@@ -143,6 +176,7 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   stan_data <- list()
   # frame data
   stan_data$parties_name <- colnames(votes)
+  stan_data$strata_info_tbl <- strata_info_tbl
   stan_data$N_f = nrow(sampling_frame)
   stan_data$n_strata_f = length(levels_strata_f)
   stan_data$p <- ncol(votes_frame_tbl)

@@ -33,6 +33,7 @@ transformed data {
   array[N_f] int<lower=0> total_f; // observed totals frame
   array[N] int<lower=0> total; // observed totals sample
   real<lower=0> total_nominal;
+  array[n_strata_f]  real<lower=0> total_nominal_strata;
   matrix[N, n_covariates_f + 1] x1;
   matrix[N_f, n_covariates_f + 1] x1_f;
   vector[N] zeros;
@@ -47,8 +48,12 @@ transformed data {
     total[i] = sum(y[i, ]);
   }
   total_nominal = 0;
+  for(s in 1:n_strata_f){
+    total_nominal_strata[s] = 0;
+  }
   for(i in 1:N_f){
     if(n_f[i] < nominal_max){
+      total_nominal_strata[stratum_f[i]] += n_f[i];
       total_nominal += n_f[i];
     }
   }
@@ -149,6 +154,8 @@ model {
 
 generated quantities {
   vector[p] y_out;
+  matrix[n_strata_f, p] y_out_strata;
+  matrix[n_strata_f, p] prop_votos_strata;
   array[p] real prop_votos;
   vector[p] theta_f;
   vector[p] alpha_bn_f;
@@ -158,6 +165,7 @@ generated quantities {
   vector[p] w_bias;
   array[N_f] real total_est;
   real participacion;
+  array[n_strata_f] real participacion_strata;
   real sum_votes;
 
 
@@ -173,10 +181,14 @@ generated quantities {
     for(k in 1:p){
       y_out[k] = 0.0;
       w_bias[k] = normal_rng(0, (1 - p_obs) / f_bias);
+      for(s in 1:n_strata_f){
+        y_out_strata[s, k] = 0.0;
+      }
     }
     for(i in 1:N_f){
       if(in_sample[i] == 1){
         y_out = y_out + to_vector(y_f[i,]);
+        y_out_strata[stratum_f[i], ] += to_row_vector(y_f[i, ]);
       } else {
         for(k in 1:p){
           pred_f[k] = dot_product(beta[k][stratum_f[i],], x1_f[i,]);
@@ -184,10 +196,20 @@ generated quantities {
         theta_f = softmax(to_vector(pred_f + w_bias));
         alpha_bn_f =  n_f[i] * theta_f_total_prop[i] * theta_f;
         for(k in 1:p){
-          y_out[k] += neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
+          real y_sim = neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
+          y_out_strata[stratum_f[i], k] += y_sim;
+          y_out[k] += y_sim;
         }
       }
     }
+  for(s in 1:n_strata_f){
+    real sum_votes_st = sum(y_out_strata[s, ]);
+    for(k in 1:p){
+      prop_votos_strata[s, k] = y_out_strata[s, k] / sum_votes_st;
+    }
+    participacion_strata[s] = sum_votes_st / total_nominal_strata[s];
+  }
+
   sum_votes = sum(y_out);
   for(k in 1:p){
     prop_votos[k] = y_out[k] / sum_votes;
