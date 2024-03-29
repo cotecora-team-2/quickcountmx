@@ -189,13 +189,15 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
   }
   bootstrap_reps <- NULL
   if(B > 0){
-    sample_ids <- unique(data_parties_long_tbl$internal_id)
+    sample_ids <- distinct(data_parties_long_tbl, internal_id, strata) |>
+      group_by(strata)
     set.seed(seed)
     bootstrap_reps <- purrr::map(1:B, function(b){
-      sample_ids_bootstrap <- tibble(internal_id = sample(sample_ids, replace = TRUE),
-                                     internal_id_bs = 1:length(sample_ids))
+      sample_ids_bootstrap <- slice_sample(sample_ids, prop = 1.0, replace = TRUE) |>
+        ungroup() |>
+        mutate(internal_id_bs = 1:n())
       data_parties_long_tbl_bootstrap <- data_parties_long_tbl |>
-        right_join(sample_ids_bootstrap, by = "internal_id", relationship = "many-to-many") |>
+        right_join(sample_ids_bootstrap, by = c("internal_id", "strata"), relationship = "many-to-many") |>
         ungroup() |>
         select(-internal_id)
       calculate_diputados(data_parties_long_tbl_bootstrap, stratum, stratum_tbl, n_stratum,
@@ -231,3 +233,15 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
 }
 
+assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, candidate_name){
+  coalitions_tbl <- coalitions_tbl |>
+    rename(party = {{ party_name }}) |>
+    rename(candidate = {{ candidate_name }})
+  aggregate_coalitions_tbl <- estimates_strata_tbl |>
+    left_join(coalitions_tbl, by = c("party", "strata")) |>
+    group_by(rep, strata, candidate) |>
+    summarise(prop_votes = sum(prop_votes)) |>
+    group_by(rep, strata) |>
+    summarise(party = candidate[which.max(prop_votes)])
+  aggregate_coalitions_tbl
+}
