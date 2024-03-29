@@ -149,13 +149,15 @@ collapse_strata <- function(data_tbl, data_stratum){
 #'  defaults to 50.
 #' @param seed integer value used to set the state of the random number
 #' generator (optional).
+#' @param samples_table logical indicating if the function should return the samples
+#' as a list of tibbles for bootstrap samples
 #' @return A \code{list} including two componentes: point estimates at national level
 #' and at stratum level, and bootstrap replications of these quantities.
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
 bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
-                                coalitions_tbl, B = 50, seed = NA){
+                                coalitions_tbl, B = 50, seed = NA, samples_table = FALSE){
 
   stratum_tbl <- stratum_tbl |>
     rename(strata = {{ stratum }}, n_strata = {{ n_stratum }})
@@ -190,14 +192,23 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
     sample_ids <- unique(data_parties_long_tbl$internal_id)
     set.seed(seed)
     bootstrap_reps <- purrr::map(1:B, function(b){
-      sample_ids_bootstrap <- tibble(internal_id = sample(sample_ids, replace = TRUE))
+      sample_ids_bootstrap <- tibble(internal_id = sample(sample_ids, replace = TRUE),
+                                     internal_id_bs = 1:length(sample_ids))
       data_parties_long_tbl_bootstrap <- data_parties_long_tbl |>
-        semi_join(sample_ids_bootstrap, by = "internal_id")
+        right_join(sample_ids_bootstrap, by = "internal_id", relationship = "many-to-many") |>
+        ungroup() |>
+        select(-internal_id)
       calculate_diputados(data_parties_long_tbl_bootstrap, stratum, stratum_tbl, n_stratum,
                           coalitions_tbl, parties_chr)
     })
   }
-  return(list(point_estimate = point_estimate, bootstrap_reps = bootstrap_reps))
+  output <- list(point_estimate = point_estimate, bootstrap_reps = bootstrap_reps)
+  if(samples_table){
+    total_tbl <- purrr::map_dfr(1:B,  ~ output$bootstrap_reps[[.x]]$estimates_total |> mutate(rep = .x))
+    strata_tbl <- purrr::map_dfr(1:B, ~ output$bootstrap_reps[[.x]]$estimates_strata |> mutate(rep = .x))
+    output <- list(total_tbl = total_tbl, strata_tbl = strata_tbl)
+  }
+  return(output)
 }
 
 
@@ -208,7 +219,8 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
     tidyr::pivot_wider(names_from = party, values_from = n_votes, values_fill = 0)
 
   ratio <- ratio_estimation(data_parties_tbl, strata, stratum_tbl,n_stratum = n_strata,
-                            parties = tidyr::all_of(parties_chr), B=0, std_errors = FALSE)
+                            parties = tidyr::all_of(parties_chr), B=0, std_errors = FALSE) |>
+    mutate(prop = prop / 100)
 
   estimates_strata_tbl <- data_parties_long_tbl |>
     group_by(strata, party) |>
@@ -218,3 +230,4 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 
   list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
 }
+
