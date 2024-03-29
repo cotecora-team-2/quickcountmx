@@ -19,3 +19,28 @@ test_that("test point estimates", {
   expect_equal(estimates$prop, 100 * c(10 / sum_votes, 5 / sum_votes, 16 / 70, 1 / sum_votes) )
   expect_equal(estimates$std_error, c(0, 0, 0, 0))
 })
+
+
+test_diputados_tbl <- dplyr::tibble(
+  strata = c(rep("A", 10), rep("B", 10), rep("C", 5), rep("D", 4)),
+  x = 1:29, x_y = rep(1, 29), y = rep(3, 29), z = rep(5:33)) |>
+  dplyr::mutate(LISTA_NOMINAL = rep(70, 29))
+stratum_tbl <- dplyr::tibble(strata = c("A", "B", "C", "D"), n_strata = c(20, 70, 50, 40))
+coalitions_tbl <- dplyr::tibble(
+  coalition = c("x", "x_y", "x_y", "y", "z"),
+  party = c("x", "x", "y", "y", "z"))
+
+test_that("point estimates dip", {
+  estimates <- bootstrap_diputados(test_diputados_tbl, stratum = strata,
+                                    stratum_tbl = stratum_tbl, n_stratum = n_strata,
+                                    coalitions_tbl = coalitions_tbl, B = 2, seed = 12)
+  expect_equal(nrow(estimates$point_estimate$estimates_total), 4)
+  expect_equal(nrow(estimates$point_estimate$estimates_strata), 12)
+})
+
+test_that("bootstrap reps dip", {
+  estimates <- bootstrap_diputados(test_diputados_tbl, stratum = strata,
+                                   stratum_tbl = stratum_tbl, n_stratum = n_strata,
+                                   coalitions_tbl = coalitions_tbl, B = 2, seed = 12)
+  expect_equal(length(estimates$bootstrap_reps), 2)
+})

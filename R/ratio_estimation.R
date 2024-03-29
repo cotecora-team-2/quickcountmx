@@ -133,6 +133,27 @@ collapse_strata <- function(data_tbl, data_stratum){
   data_strata_collapsed
 }
 
+#' Bootstrap replicates to estimate diputados results
+#'
+#' Compute bootstrap resamples of ratio estimator for each party at national level,
+#' along with proportion of votes for each stratum and party.
+#' @param data_tbl \code{tibble}
+#' @param stratum Unquoted variable indicating the stratum for each polling
+#'   station.
+#' @param data_stratum Data frame with stratum variable (named exactly as in
+#'   \code{data}) and number of polling stations per strata.
+#' @param n_stratum Unquoted variable indicating the number of polling stations
+#'   in each stratum.
+#' @param coalitions_tbl Tibble with coalitions names and corresponding parties.
+#' @param B Number of bootstrap replicates,
+#'  defaults to 50.
+#' @param seed integer value used to set the state of the random number
+#' generator (optional).
+#' @return A \code{list} including two componentes: point estimates at national level
+#' and at stratum level, and bootstrap replications of these quantities.
+#' @importFrom dplyr %>%
+#' @importFrom rlang :=
+#' @export
 bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
                                 coalitions_tbl, B = 50, seed = NA){
 
@@ -178,6 +199,7 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
   }
   return(list(point_estimate = point_estimate, bootstrap_reps = bootstrap_reps))
 }
+
 
 calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_stratum,
                                 coalitions_tbl, parties_chr){
