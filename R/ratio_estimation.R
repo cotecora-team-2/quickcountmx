@@ -132,3 +132,67 @@ collapse_strata <- function(data_tbl, data_stratum){
     ungroup()
   data_strata_collapsed
 }
+
+bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
+                                coalitions_tbl, B = 50, seed = NA){
+
+  stratum_tbl <- stratum_tbl |>
+    rename(strata = {{ stratum }}, n_strata = {{ n_stratum }})
+
+  data_tbl <- data_tbl |>
+    ungroup() |>
+    rename(strata = {{ stratum }})
+  parties_chr <- unique(coalitions_tbl$party)
+  coalitions <- unique(coalitions_tbl$coalition)
+
+  coalitions_tbl <- coalitions_tbl |>
+    group_by(coalition) |>
+    mutate(multiplier = 1/n()) |>
+    ungroup()
+
+  data_parties_long_tbl <- data_tbl |>
+    mutate(internal_id = row_number()) |>
+    select(internal_id, strata, all_of(coalitions), LISTA_NOMINAL) |>
+    tidyr::pivot_longer(cols = all_of(coalitions), names_to = "coalition", values_to = "n_votes") |>
+    dplyr::left_join(coalitions_tbl, by = "coalition", relationship = "many-to-many") |>
+    dplyr::mutate(n_votes_weighted = n_votes * multiplier)|>
+    group_by(internal_id, strata, party, LISTA_NOMINAL) |>
+    summarise(n_votes = sum(n_votes_weighted), .groups = "drop")
+
+  point_estimate <- calculate_diputados(data_parties_long_tbl, stratum, stratum_tbl, n_stratum,
+                                        coalitions_tbl, parties_chr)
+  if(is.na(seed)){
+    seed <- 2212
+  }
+  bootstrap_reps <- NULL
+  if(B > 0){
+    sample_ids <- unique(data_parties_long_tbl$internal_id)
+    set.seed(seed)
+    bootstrap_reps <- purrr::map(1:B, function(b){
+      sample_ids_bootstrap <- tibble(internal_id = sample(sample_ids, replace = TRUE))
+      data_parties_long_tbl_bootstrap <- data_parties_long_tbl |>
+        semi_join(sample_ids_bootstrap, by = "internal_id")
+      calculate_diputados(data_parties_long_tbl_bootstrap, stratum, stratum_tbl, n_stratum,
+                          coalitions_tbl, parties_chr)
+    })
+  }
+  return(list(point_estimate = point_estimate, bootstrap_reps = bootstrap_reps))
+}
+
+calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_stratum,
+                                coalitions_tbl, parties_chr){
+
+  data_parties_tbl <- data_parties_long_tbl |>
+    tidyr::pivot_wider(names_from = party, values_from = n_votes, values_fill = 0)
+
+  ratio <- ratio_estimation(data_parties_tbl, strata, stratum_tbl,n_stratum = n_strata,
+                            parties = tidyr::all_of(parties_chr), B=0, std_errors = FALSE)
+
+  estimates_strata_tbl <- data_parties_long_tbl |>
+    group_by(strata, party) |>
+    summarise(total_votes = sum(n_votes), .groups = "drop_last") |>
+    mutate(prop_votes = total_votes / sum(total_votes)) |>
+    ungroup()
+
+  list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
+}
