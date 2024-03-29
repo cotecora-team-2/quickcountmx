@@ -245,6 +245,7 @@ assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, ca
     rename(candidate = {{ candidate_name }})
   aggregate_coalitions_tbl <- estimates_strata_tbl |>
     left_join(coalitions_tbl, by = c("party", "strata")) |>
+    mutate(candidate = ifelse(is.na(candidate), party, candidate)) |>
     group_by(rep, strata, candidate) |>
     summarise(prop_votes = sum(prop_votes)) |>
     group_by(rep, strata) |>
