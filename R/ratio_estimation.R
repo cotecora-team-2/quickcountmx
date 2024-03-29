@@ -239,6 +239,7 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 #' @param party_name Unquoted variable indicating the party name.
 #' @param candidate_name Unquoted variable indicating the assigned party.
 #'
+#' @export
 assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, candidate_name){
   coalitions_tbl <- coalitions_tbl |>
     rename(party = {{ party_name }}) |>

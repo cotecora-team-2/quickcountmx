@@ -123,18 +123,21 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 assignment_tbl <- readr::read_csv("../data-raw/asignacion-coaliciones.csv") |> 
   rename(party = nombre_partido) |> mutate(strata = paste(ID_ENTIDAD, DISTRITO, sep = "."))
 
-coalitions_tbl <- tibble(coalition = names(sample_diputados)[16:36]) |> 
-  mutate(party = coalition) |> 
-  tidyr::separate_longer_delim(party, delim = "_")
+
   
 sample_diputados <- readr::read_delim("../data-raw/REMESAS0400020027.txt", 
     delim = "|", escape_double = FALSE, trim_ws = TRUE, 
     skip = 1) |> 
   mutate(distrito_f = paste(ID_ESTADO, ID_DISTRITO_FEDERAL, sep = "."))
+
+coalitions_tbl <- tibble(coalition = names(sample_diputados)[16:36]) |> 
+  mutate(party = coalition) |> 
+  tidyr::separate_longer_delim(party, delim = "_")
+
 n_strata_tbl <- sample_diputados |> 
   group_by(distrito_f) |> 
   count()
-estimates <- bootstrap_diputados(sample_dip, stratum = distrito_f,
+estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
                                  stratum_tbl = n_strata_tbl, n_stratum = n,
                                  coalitions_tbl = coalitions_tbl, B = 100, seed = 12,
                                  samples_table = TRUE)
