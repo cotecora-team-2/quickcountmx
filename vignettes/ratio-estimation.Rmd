@@ -120,12 +120,12 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 ```{r}
 
 
-assignment_tbl <- readr::read_csv("../data-raw/asignacion-coaliciones.csv") |> 
+assignment_tbl <- readr::read_csv("asignacion-coaliciones.csv") |> 
   rename(party = nombre_partido) |> mutate(strata = paste(ID_ENTIDAD, DISTRITO, sep = "."))
 
 
   
-sample_diputados <- readr::read_delim("../data-raw/REMESAS0400020027.txt", 
+sample_diputados <- readr::read_delim("REMESAS0400020027.txt", 
     delim = "|", escape_double = FALSE, trim_ws = TRUE, 
     skip = 1) |> 
   mutate(distrito_f = paste(ID_ESTADO, ID_DISTRITO_FEDERAL, sep = "."))
