@@ -140,7 +140,7 @@ collapse_strata <- function(data_tbl, data_stratum){
 #' @param data_tbl \code{tibble}
 #' @param stratum Unquoted variable indicating the stratum for each polling
 #'   station.
-#' @param data_stratum Data frame with stratum variable (named exactly as in
+#' @param stratum_tbl Data frame with stratum variable (named exactly as in
 #'   \code{data}) and number of polling stations per strata.
 #' @param n_stratum Unquoted variable indicating the number of polling stations
 #'   in each stratum.

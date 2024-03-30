@@ -21,6 +21,9 @@ bootstrap_diputados(
 \item{stratum}{Unquoted variable indicating the stratum for each polling
 station.}
 
+\item{stratum_tbl}{Data frame with stratum variable (named exactly as in
+\code{data}) and number of polling stations per strata.}
+
 \item{n_stratum}{Unquoted variable indicating the number of polling stations
 in each stratum.}
 
@@ -34,9 +37,6 @@ generator (optional).}
 
 \item{samples_table}{logical indicating if the function should return the samples
 as a list of tibbles for bootstrap samples}
-
-\item{data_stratum}{Data frame with stratum variable (named exactly as in
-\code{data}) and number of polling stations per strata.}
 }
 \value{
 A \code{list} including two componentes: point estimates at national level
