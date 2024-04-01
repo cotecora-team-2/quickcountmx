@@ -113,13 +113,14 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   output$inv_metric <- fit$inv_metric()[[1]] |> diag()
   estimates_tbl <- NULL
   estimates_tbl <- fit$summary(variables = c("prop_votos", "participacion"),
-                               ~ quantile(.x, probs = c(0.03, 0.5, 0.97)),
+                               ~ quantile(.x, probs = c(0.02, 0.5, 0.98)),
                                rhat = ~ posterior::rhat(.x),
                                ess = ~ posterior::ess_basic(.x))
   names(estimates_tbl) <- c("party", "inf", "median", "sup", "rhat", "ess")
   estimates_tbl$party <- c(parties_name, "part")
   print(estimates_tbl)
   output$estimates <- estimates_tbl
+  file.remove(fit$output_files())
   return(output)
 }
 

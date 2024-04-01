@@ -1,0 +1,207 @@
+---
+title: "pruebas_logit"
+format: html
+editor: visual
+---
+
+```{r setup}
+library(quickcountmx)
+cmdstanr::install_cmdstan(cores = 2, quiet = TRUE)
+```
+
+```{r}
+library(tidyverse)
+load("../data/conteo_2018.rda")
+nrow(conteo_2018)
+```
+
+```{r}
+conteo_2018 <- conteo_2018 |>
+  filter(TOTAL_VOTOS_CALCULADOS!= 0) |>
+  filter(ID_DISTRITO != 0) |>
+  mutate(distrito_f = interaction(ID_ESTADO, ID_DISTRITO)) |>
+  mutate(OTROS = VN + CNR + CAND_IND_01) |>
+  mutate(no_casilla = row_number()) |>
+  mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, 1200, LISTA_NOMINAL_CASILLA)) |> 
+  mutate(tipo_1 = ifelse(tipo_seccion == 1, 1, 0)) |> 
+  mutate(tipo_2 = ifelse(tipo_seccion == 2, 2, 0)) |> 
+  mutate(casilla_e = ifelse(tipo_casilla == "E", 1, 0)) |>
+  mutate(split_var = as.character(ID_ESTADO))
+# covariates
+final_computos <- conteo_2018 %>% 
+  select(any_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS", "TOTAL_VOTOS_CALCULADOS"))) %>%
+  summarise(across(where(is.numeric), ~ sum(.x, na.rm = TRUE))) |>
+  mutate(across(where(is.numeric), ~ .x / TOTAL_VOTOS_CALCULADOS)) |>
+  pivot_longer(cols = everything(), names_to = "candidato", values_to = "prop")
+final_computos
+part <- sum(conteo_2018$TOTAL_VOTOS_CALCULADOS) / sum(conteo_2018$LISTA_NOMINAL_CASILLA) 
+final_computos <- final_computos |> add_row(candidato = "part", prop = part)
+```
+
+```{r}
+cortes <- c(0.02, 0.04)
+n_rep = 100
+set.seed(1010)
+muestras <- map_df(cortes, function(corte_s){
+  map_df(1:n_rep, function(i){
+    select_sample_prop(conteo_2018, 
+    stratum = distrito_f, frac = corte_s) |>
+    mutate(num_muestra = i) |>
+    select(num_muestra, no_casilla, split_var, 
+           distrito_f, tipo_seccion, ln, tipo_1, tipo_2, casilla_e,
+           c(AMLO, JAMK, RAC, CAND_IND_02, OTROS)) |>
+    ungroup()
+  }) |> 
+  mutate(corte = corte_s)
+}) 
+```
+
+```{r}
+covariables <- c("tipo_seccion")
+muestra <- muestras |> filter(num_muestra == 1 & corte == 0.02) 
+# muestra |> group_by(distrito_f) |> summarise(n = n())
+# muestras |> group_by(num_muestra, corte, split_var) |> summarise(n = n()) |> pull(n)
+prop_obs <- .99
+res_base <- quickcountmx::hb_estimation(
+  data_tbl = muestra,
+  stratum = distrito_f, 
+  id_station = no_casilla, 
+  sampling_frame = conteo_2018, 
+  parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")), 
+  covariates = all_of(c(covariables)),
+  model = "logit", 
+  nominal_max = 1200, 
+  prop_obs = prop_obs)
+prev_inv_metric <- res_base$inv_metric
+res_base$estimates |> transmute(LI = round(inf*100, 2), LS = round(sup*100, 2))
+```
+
+```{r}
+estimaciones <- map_df(1:n_rep, function(rep){
+    cat(rep, "\n") 
+    est_rep <- map_df(cortes, function(corte_s){ 
+      cat(corte_s, "\n")
+      muestra <- muestras |> filter(num_muestra == rep & corte == corte_s) 
+      res <- quickcountmx::hb_estimation(
+        data_tbl = muestra,
+        stratum = distrito_f, 
+        id_station = no_casilla, 
+        sampling_frame = conteo_2018, 
+        parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")), 
+       covariates = all_of(c(covariables)),
+        model = "logit", 
+        nominal_max = 1200, 
+        prop_obs = prop_obs,
+        inv_metric = prev_inv_metric)    
+      res$estimates |> mutate(num_muestra = rep, corte = corte_s)
+  })
+  write_csv(est_rep, paste0("salidas-logit/estimaciones_prueba_rep_", rep, ".csv"))
+  est_rep
+})
+write_csv(estimaciones, "salidas-logit/estimaciones_prueba_juntas", rep, ".csv")
+```
+
+```{r}
+file_list <- list.files("salidas/", pattern = "*.csv", full.names = TRUE) |>
+  map(read_csv)  
+estimaciones <- reduce(file_list, rbind)
+```
+
+```{r}
+# estimaciones <- read_csv("salidas/estimaciones_prueba_juntas.csv")
+resultados <- estimaciones |>
+  mutate(LI = 100*inf, LS = 100*sup) |>
+  select(candidato = party, LI, LS, num_muestra, corte)
+```
+
+### Correr razón
+
+```{r}
+estratos_tbl <- conteo_2018 |> count(distrito_f)
+muestras <- muestras |> 
+  mutate(LISTA_NOMINAL = ln)
+estimaciones_razon <- map_df(1:n_rep, function(rep){
+    print(rep)
+    map_df(cortes, function(corte_s){
+      muestra <- muestras |> filter(num_muestra == rep & corte == corte_s) 
+      est_razon <- ratio_estimation(muestra, stratum = distrito_f, 
+                                  data_stratum = estratos_tbl, 
+                                  n_stratum = n, 
+                                  parties = all_of(c("AMLO", "JAMK", "RAC", "CAND_IND_02", "OTROS")), 
+                                  B = 50
+                                  )
+    est_razon$num_muestra <- rep
+    est_razon$corte <- corte_s
+    est_razon <- est_razon |> 
+      mutate(LI = prop - 2 * std_error,
+             LS = prop + 2 * std_error) |> 
+      rename(candidato = party) |> 
+      mutate(candidato = ifelse(candidato == "part", "PART", candidato))
+    est_razon |> select(num_muestra, corte, candidato, prop, LI, LS)
+  })
+})
+```
+
+```{r}
+resultados_juntos <- estimaciones_razon |> 
+  mutate(metodo = "razon") |>
+  select(-prop) |>
+  bind_rows(resultados |> mutate(metodo = "nbh")) 
+```
+
+```{r}
+long_intervalos <- resultados_juntos  |>
+  mutate(long = LS-LI)  |>
+  group_by(corte, candidato, metodo) |> 
+  summarise(long_max = max(long)) 
+```
+
+```{r}
+long_intervalos |> ggplot(aes(x = corte, y = long_max, colour = candidato)) +
+  geom_line() + geom_point() + facet_wrap(~metodo)
+```
+
+```{r}
+coberturas <- resultados_juntos |>
+  left_join(final_computos |> mutate(prop_computos = 100*prop)) |>
+  mutate(cubre = prop_computos >= LI & prop_computos <= LS) |> 
+  group_by(corte, candidato, metodo) |> 
+  summarise(cobertura = mean(cubre)) 
+```
+
+```{r}
+coberturas |> ggplot(aes(x = corte, y = cobertura, colour = candidato)) +
+  geom_line() + geom_point() + facet_wrap(~metodo)
+```
+
+```{r}
+resultados_ord <- resultados |> 
+  # filter(candidato %in% candidatos_grandes) |>
+  left_join(final_computos |> mutate(prop_computos = 100*prop)) |>
+  filter(corte == cortes[2]) |> 
+  arrange(desc(LS), candidato) |> 
+  mutate(num_muestra_ordenado = factor(num_muestra, levels = unique(num_muestra)))
+
+ggplot(resultados_ord, aes(x = num_muestra_ordenado)) +
+  geom_segment(aes(x = num_muestra_ordenado, xend = num_muestra_ordenado, y = LI, yend = LS), color = "blue") +
+  geom_hline(aes(yintercept = prop_computos), linetype = "dashed", color = "red") +
+  labs(x = "Número de Muestra", y = "Valor") +
+  theme_minimal() +
+  facet_wrap(~candidato, scales = "free_y", dir = "v") 
+```
+
+```{r}
+resultados_ord <- resultados |> 
+  filter(candidato == "part") |>
+  left_join(final_computos |> mutate(prop_computos = 100*prop)) |>
+  filter(corte == cortes[2]) |> 
+  arrange(desc(LS), candidato) |> 
+  mutate(num_muestra_ordenado = factor(num_muestra, levels = unique(num_muestra)))
+
+ggplot(resultados_ord, aes(x = num_muestra_ordenado)) +
+  geom_segment(aes(x = num_muestra_ordenado, xend = num_muestra_ordenado, y = LI, yend = LS), color = "blue") +
+  geom_hline(aes(yintercept = prop_computos), linetype = "dashed", color = "red") +
+  labs(x = "Número de Muestra", y = "Valor") +
+  theme_minimal() +
+  facet_wrap(~candidato, scales = "free_y", dir = "v") 
+```
