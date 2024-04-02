@@ -62,6 +62,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   }
   parameters <- jsonlite::read_json(json_path, simplifyVector = TRUE)
   parameters$nominal_max <- nominal_max
+
   data_list <- create_hb_data(data_tbl, sampling_frame,
                               parties = {{parties}}, covariates = {{covariates}},
                               prop_obs = prop_obs)
@@ -122,6 +123,92 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   output$estimates <- estimates_tbl
   return(output)
 }
+
+#' Bayesian hierarchical model to estimate proportion of votes allocated to each party
+#'
+#' Compute point estimate and credible intervals for each candidate, parallized over
+#' split_var.
+#' @details Posterior simulations of parameters are computed using stan,
+#' and each party's votes are simulated for every polling station (logit model)
+#' or with a softmax link for the default (mlogit model). There is one
+#' independent model for each party, and proportions are calculated from posterior simulations
+#' of total votes. Splits are modelled independently
+#'
+#' @param data_tbl \code{tibble} of sample data.
+#' @param sampling_frame \code{tibble} of sampling frame with stratum variable (named exactly as in
+#'   \code{data_tbl}) and covariates.
+#' @param split_var unquoted name of variable that splits sampling frame and data
+#' @param num_cores Number of cores to use for parallel computation
+#' @param inv_metric_list List of inv_metric diagonals guesses for each split
+#' @param ... Other parameters passed to hb_estimation.
+#' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
+#' estimates including point estimates for each party (median)
+#'   and limits of credible intervals, and a vector inv_metric for the model
+#' @importFrom dplyr %>%
+#' @importFrom rlang :=
+#' @export
+hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL, num_cores = 5,
+                                   inv_metric_list = NULL, ...){
+
+  sampling_frame <- sampling_frame %>%
+    ungroup() %>%
+    rename(region = {{ split_var }})
+
+  data_tbl <- data_tbl %>%
+    ungroup() %>%
+    rename(region = {{ split_var }})
+
+  #total_nominal <- sampling_frame_tbl |> summarise(total_nominal = sum(LISTA_NOMINAL_CASILLA))
+  regions <- unique(sampling_frame$region)
+  sampling_frame_split <- sampling_frame |> split(sampling_frame$region)
+  data_split <- data_tbl |> split(data_tbl$region)
+
+  res_list <- parallel::mclapply(1:length(regions), function(i){
+
+    sampling_frame_slice <- sampling_frame_split[[i]]
+    data_slice_tbl <- data_split[[i]]
+    region_name <- sampling_frame_slice$region[1]
+    if(!is.null(inv_metric_list)){
+      inv_metric_slice <- inv_metric_list[[region_name]]
+    } else {
+      inv_metric_slice <- NULL
+    }
+    fit_slice <- hb_estimation(sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
+                         inv_metric = inv_metric_slice,
+                         return_fit = TRUE, ...)
+    parties_names <- fit_slice$estimates$party
+   y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
+     as_tibble() |>
+     mutate(region = region_name)
+   estimates_slice <- fit_slice$estimates |> mutate(region = region_name)
+   list(fit = fit_slice, y_out = y_out_tbl, parties_names = parties_names,
+        estimates_slice = estimates_slice, region_name = region_name)
+  }, mc.cores = num_cores)
+  y_out_tbl <- bind_rows(res_list |> purrr::map( ~.x$y_out)) |>
+    group_by(.draw) |>
+    summarise(across(contains("y_out"), ~ sum(.x, na.rm = TRUE))) |>
+    pivot_longer(cols = contains("y_out"), names_to = "party", values_to = "votes") |>
+    group_by(.draw) |>
+    mutate(total_votes = sum(votes)) |>
+    mutate(prop_votes = votes / total_votes)
+  estimates_tbl <- y_out_tbl |>
+    group_by(party) |>
+    summarise(median = mean(prop_votes),
+              inf = quantile(prop_votes, probs = 0.02),
+              sup = quantile(prop_votes, probs = 0.98))
+  output <- list()
+  region_names <- res_list |> purrr::map( ~.x$region_name)
+  estimates_tbl$party <- head(res_list[[1]]$parties_names, -1)
+  output$estimates <- estimates_tbl
+  inv_metric_list <- res_list |> purrr::map(~.x$fit) |> purrr::map( ~.x$inv_metric)
+  names(inv_metric_list) <- region_names
+  output$inv_metric <- inv_metric_list
+  output$estimates_slice <- res_list |> purrr::map(~.x$estimates_slice) |> bind_rows()
+  print(output$estimates_slice)
+  print(output$estimates)
+  return(output)
+}
+
 
 create_hb_data <- function(data_tbl, sampling_frame, parties,
                              covariates, prop_obs = 0.995){
