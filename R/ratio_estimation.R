@@ -233,7 +233,7 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
 }
 
-#' Assign majority party to each stratum and bootstrap repetition
+#' Add column defining majority party to each stratum and bootstrap repetition
 #' @param estimates_strata_tbl Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
 #' @param coalitions_tbl Tibble with party names and corresponding assigned party by stratum.
 #' @param party_name Unquoted variable indicating the party name.
@@ -244,12 +244,13 @@ assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, ca
   coalitions_tbl <- coalitions_tbl |>
     rename(party = {{ party_name }}) |>
     rename(candidate = {{ candidate_name }})
+
   aggregate_coalitions_tbl <- estimates_strata_tbl |>
     left_join(coalitions_tbl, by = c("party", "strata")) |>
     mutate(candidate = ifelse(is.na(candidate), party, candidate)) |>
     group_by(rep, strata, candidate) |>
-    summarise(prop_votes = sum(prop_votes)) |>
-    group_by(rep, strata) |>
-    summarise(party = candidate[which.max(prop_votes)])
+    summarise(prop_votes = sum(prop_votes), .groups = "drop_last") |>
+    mutate(is_majority = prop_votes == max(prop_votes)) |>
+    ungroup()
   aggregate_coalitions_tbl
 }

@@ -149,18 +149,34 @@ national_vote_estimation |> mutate(across(where(is.numeric), ~round(.x, 4))) |>
 ```
 
 ```{r}
-party_names <- estimates$strata_tbl$party |> unique()
-assign_majority(estimates$strata_tbl, assignment_tbl , 
+majority_seats_rep <- assign_majority(estimates$strata_tbl, assignment_tbl , 
                 party_name = party, candidate_name = candidato) |> 
-  group_by(rep, party) |> 
-  count() |> 
-  group_by(party) |> 
-  summarise(inf = quantile(n, 0.02), sup = quantile(n, 0.98)) |> 
-  arrange(desc(sup)) |> 
-  right_join(tibble(party = party_names)) |> 
-  mutate(inf = ifelse(is.na(inf), 0, inf), sup = ifelse(is.na(sup), 0, sup)) 
+  group_by(candidate, rep) |> 
+  summarise(n_seats_maj = sum(is_majority), .groups = "drop_last")
+
+majority_seats_rep |>
+  summarise(inf = quantile(n_seats_maj, 0.02), sup = quantile(n_seats_maj, 0.98)) |>
+  arrange(-inf)
 ```
+Total seats, without checking over-represntation
 
 ```{r}
+estimates$total_tbl |> 
+  filter(stringr::str_detect(party, "CNR|NULOS|part|CI", negate = TRUE)) |> 
+  group_by(rep) |> 
+  filter(prop >= 0.03) |> 
+  mutate(
+    prop_adj = prop / sum(prop),
+    n_seats_prop = 200 * prop_adj) |> 
+  ungroup() |> 
+  right_join(majority_seats_rep, by = c("rep" = "rep", "party" = "candidate")) |> 
+  mutate(
+    n_seats_prop = ifelse(is.na(n_seats_prop), 0, n_seats_prop),
+    n_seats_total = n_seats_prop + n_seats_maj) |> 
+  group_by(party) |> 
+  summarise(inf = quantile(n_seats_total, 0.02), 
+            sup = quantile(n_seats_total, 0.98)) |>
+  arrange(-inf)  
+  
 ```
 
