@@ -118,14 +118,12 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 
 
 ```{r}
-
-
+# built with info from INE, states in which strata parties compete in coalitions and
+# the party to which the candidate belongs
 assignment_tbl <- readr::read_csv("asignacion-coaliciones.csv") |> 
   rename(party = nombre_partido) |> mutate(strata = paste(ID_ENTIDAD, DISTRITO, sep = "."))
-
-
   
-sample_diputados <- readr::read_delim("REMESAS0400020027.txt", 
+sample_diputados <- readr::read_delim("REMESAS0400062235.txt", 
     delim = "|", escape_double = FALSE, trim_ws = TRUE, 
     skip = 1) |> 
   mutate(distrito_f = paste(ID_ESTADO, ID_DISTRITO_FEDERAL, sep = "."))
@@ -137,43 +135,32 @@ coalitions_tbl <- tibble(coalition = names(sample_diputados)[16:36]) |>
 n_strata_tbl <- sample_diputados |> 
   group_by(distrito_f) |> 
   count()
+
 estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
                                  stratum_tbl = n_strata_tbl, n_stratum = n,
-                                 coalitions_tbl = coalitions_tbl, B = 100, seed = 12,
+                                 coalitions_tbl = coalitions_tbl, 
+                                 B = 100, seed = 12,
                                  samples_table = TRUE)
 
-national_vote_estimation <- estimates$total_tbl |> group_by(party) |> 
-  summarise(inf = quantile(prop, 0.02), sup = quantile(prop, 0.98))
-national_vote_estimation |> mutate(across(where(is.numeric), ~round(.x, 4))) |> 
-  arrange(desc(sup))
 ```
 
 ```{r}
 majority_seats_rep <- assign_majority(estimates$strata_tbl, assignment_tbl , 
                 party_name = party, candidate_name = candidato) |> 
   group_by(candidate, rep) |> 
-  summarise(n_seats_maj = sum(is_majority), .groups = "drop_last")
+  summarise(n_seats_maj = sum(n_seats_maj), .groups = "drop_last")
 
 majority_seats_rep |>
   summarise(inf = quantile(n_seats_maj, 0.02), sup = quantile(n_seats_maj, 0.98)) |>
   arrange(-inf)
 ```
-Total seats, without checking over-represntation
+Total seats,
 
 ```{r}
-estimates$total_tbl |> 
-  filter(stringr::str_detect(party, "CNR|NULOS|part|CI", negate = TRUE)) |> 
-  group_by(rep) |> 
-  filter(prop >= 0.03) |> 
-  mutate(
-    prop_adj = prop / sum(prop),
-    n_seats_prop = 200 * prop_adj) |> 
-  ungroup() |> 
-  right_join(majority_seats_rep, by = c("rep" = "rep", "party" = "candidate")) |> 
-  mutate(
-    n_seats_prop = ifelse(is.na(n_seats_prop), 0, n_seats_prop),
-    n_seats_total = n_seats_prop + n_seats_maj) |> 
-  group_by(party) |> 
+assign_seats_rep <- assign_all_seats(estimates, coalitions_tbl, assignment_tbl)
+
+assign_seats_rep |> 
+  group_by(candidate) |> 
   summarise(inf = quantile(n_seats_total, 0.02), 
             sup = quantile(n_seats_total, 0.98)) |>
   arrange(-inf)  

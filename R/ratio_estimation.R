@@ -233,7 +233,7 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
 }
 
-#' Add column defining majority party to each stratum and bootstrap repetition
+#' Add column defining majority party to each stratum and repetition
 #' @param estimates_strata_tbl Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
 #' @param coalitions_tbl Tibble with party names and corresponding assigned party by stratum.
 #' @param party_name Unquoted variable indicating the party name.
@@ -250,7 +250,90 @@ assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, ca
     mutate(candidate = ifelse(is.na(candidate), party, candidate)) |>
     group_by(rep, strata, candidate) |>
     summarise(prop_votes = sum(prop_votes), .groups = "drop_last") |>
-    mutate(is_majority = prop_votes == max(prop_votes)) |>
-    ungroup()
+    mutate(
+      prop_votes_aux = prop_votes + runif(dplyr::n(), 0, 1e-8), # fix ties
+      is_majority = prop_votes_aux == max(prop_votes_aux)) |>
+    ungroup() |>
+    select(-prop_votes_aux) |>
+    group_by(rep, candidate) |>
+    summarise(n_seats_maj = sum(is_majority), .groups = "drop")
   aggregate_coalitions_tbl
+}
+
+# assign majority and proportional seats, checking for maximum constraints per
+# party and replication
+# TODO: candidate column to be passed as argument, same as party
+assign_all_seats <- function(reps_list, coalitions_tbl, assignment_tbl) {
+
+  majority_seats_rep <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
+    party_name = party, candidate_name = candidato)
+
+  total_tbl <- reps_list$total_tbl |>
+    dplyr::filter(party != "part") |>
+    dplyr::mutate(n_assign = 200, topped = FALSE)
+
+  prop_seats_rep <- assign_prop(total_tbl)
+
+  all_seats <- majority_seats_rep |>
+    dplyr::group_by(rep) |>
+    dplyr::left_join(prop_seats_rep, by = c("rep" = "rep", "candidate" = "party")) |>
+    dplyr::mutate(
+      n_seats_max = floor(500 * (prop_adj + 0.08)),
+      n_seats_raw = n_seats_prop + n_seats_maj,
+      n_seats_total = pmin(n_seats_raw, n_seats_max),
+      topped = n_seats_max == n_seats_total
+      ) |>
+    arrange(rep)
+
+  to_assign <- all_seats |>
+    dplyr::mutate(n_assign = 500 - sum(n_seats_total)) |>
+    dplyr::select(rep, candidate, n_assign, topped) |>
+    dplyr::ungroup()
+
+  # if seats left assign in second round
+  if(sum(to_assign$n_assign) > 0) {
+    total_tbl <- total_tbl |>
+      dplyr::select(-n_assign, -topped) |>
+      dplyr::left_join(to_assign, by = c("rep", "party" = "candidate"))
+    prop_seats_rep <- assign_prop(total_tbl) |>
+      dplyr::select(party, rep, n_seats_new = n_seats_prop)
+
+    all_seats <- all_seats |>
+      dplyr::left_join(prop_seats_rep, by = c("rep" = "rep", "candidate" = "party")) |>
+      dplyr::mutate(
+        n_seats_raw = n_seats_raw + n_seats_new,
+        n_seats_total = pmin(n_seats_raw, n_seats_max),
+        topped = n_seats_max == n_seats_total
+      ) |>
+      dplyr::arrange(rep)
+
+    to_assign <- all_seats |>
+      dplyr::mutate(n_assign = 500 - sum(n_seats_total)) |>
+      dplyr::select(rep, candidate, n_assign, topped) |>
+      dplyr::ungroup()
+  }
+
+  all_seats |>
+    dplyr::select(rep, candidate, n_seats_maj, n_seats_prop, n_seats_total)
+}
+
+# assigns sample proportional to national voting,
+# total_tbl must include columns: n_assign seats to allocate, per replication
+# topped: whether the party has reached it's maximum number of seats
+assign_prop <- function(total_tbl) {
+  parties_ignore <- c("CNR", "NULOS", "CI")
+
+  total_tbl |>
+    dplyr::group_by(rep) |>
+    dplyr::mutate(
+      prop_adj = ifelse(prop < 0.03 | topped |
+        stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
+        0, prop),
+      prop_adj = prop_adj / sum(prop_adj),
+      n_seats_prop = floor(n_assign * prop_adj),
+      resto = n_assign * prop_adj - n_seats_prop,
+      to_distribute = ifelse(n_assign > 0, n_assign - sum(n_seats_prop), 0),
+      rank_resto = dplyr::row_number(-resto),
+      n_seats_prop = ifelse(rank_resto <= to_distribute, n_seats_prop + 1, n_seats_prop)
+    )
 }
