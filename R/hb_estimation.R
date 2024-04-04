@@ -121,6 +121,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   estimates_tbl$party <- c(parties_name, "part")
   print(estimates_tbl)
   output$estimates <- estimates_tbl
+  file.remove(fit$output_files())
   return(output)
 }
 
