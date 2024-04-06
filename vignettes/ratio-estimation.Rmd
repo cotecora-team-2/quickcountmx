@@ -157,7 +157,7 @@ majority_seats_rep |>
 Total seats,
 
 ```{r}
-assign_seats_rep <- assign_all_seats(estimates, coalitions_tbl, assignment_tbl)
+assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
 
 assign_seats_rep |> 
   group_by(candidate) |> 

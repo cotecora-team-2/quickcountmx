@@ -233,20 +233,41 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
 }
 
-#' Add column defining majority party to each stratum and repetition
-#' @param estimates_strata_tbl Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
-#' @param coalitions_tbl Tibble with party names and corresponding assigned party by stratum.
+#' @name assign_deputy_seats
+#' @aliases assign_all_seats
+#' @aliases assign_majority
+#' @aliases assign_prop
+#'
+#' @title  Functions that help with the  assignment of the Chamber of Deputies.
+#'
+#' @description There are 500 seats to be assigned in the Chamber of Deputies in Mexico.
+#' The process involves different steps.
+#' `assign_all_seats`: Assigns the total of 500 seats of majority and proportional seats, checking for maximum constraints per
+# party and replication.
+#' `assign_majority`: Add column defining the majority party of the first 300 seats to each stratum and repetition.
+#' `assign_prop`: Assigns n_assign seats to parties using proportional representation in national voting and "resto mayor".
+#' @param reps_list A named list (output of bootstrap_diputados) with elements strata_tbl and total_tbl
+#' @param estimates_strata_tbl Tibble with estimates of proportion of votes per party per repetition per stratum (output of bootstrap_diputados)
+#' @param assignment_tbl Tibble with party names and corresponding assigned party by stratum.
 #' @param party_name Unquoted variable indicating the party name.
 #' @param candidate_name Unquoted variable indicating the assigned party.
+#' @param total_tbl Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
+#' total_tbl must include columns: n_assign seats to allocate, per replication and 
+#' topped: a logical value whether the party has reached it's maximum number of seats (TRUE)
+#'
+#' @rdname assign_deputy_seats
+#' @return  `assign_majority` returns a tibble with columns:
+#' `rep` number of repetition, `candidate` the party, and
+#' `n_seats_maj` integer, number of seats assigned by majority for each of the parties out of the first 300;
 #'
 #' @export
-assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, candidate_name){
-  coalitions_tbl <- coalitions_tbl |>
+assign_majority <- function(estimates_strata_tbl, assignment_tbl, party_name, candidate_name){
+  assignment_tbl <- assignment_tbl |>
     rename(party = {{ party_name }}) |>
     rename(candidate = {{ candidate_name }})
 
   aggregate_coalitions_tbl <- estimates_strata_tbl |>
-    left_join(coalitions_tbl, by = c("party", "strata")) |>
+    left_join(assignment_tbl, by = c("party", "strata")) |>
     mutate(candidate = ifelse(is.na(candidate), party, candidate)) |>
     group_by(rep, strata, candidate) |>
     summarise(prop_votes = sum(prop_votes), .groups = "drop_last") |>
@@ -259,11 +280,16 @@ assign_majority <- function(estimates_strata_tbl, coalitions_tbl, party_name, ca
     summarise(n_seats_maj = sum(is_majority), .groups = "drop")
   aggregate_coalitions_tbl
 }
-
-# assign majority and proportional seats, checking for maximum constraints per
-# party and replication
-# TODO: candidate column to be passed as argument, same as party
-assign_all_seats <- function(reps_list, coalitions_tbl, assignment_tbl) {
+#'
+#' @rdname assign_deputy_seats
+#' @return  `assign_all_seats` returns a tibble with columns:
+#' `rep` number of repetition, `candidate` the party, and
+#' `n_seats_maj` integer, number of seats assigned by majority for each of the parties out of the first 300;
+#' `n_seats_prop` integer, is the number of seats assigned by proportionality and "resto mayor", out of the 200, for each of the parties;
+#' `n_seats_total` integer, is the total number of seats, out of the 500, for each of the parties;
+#'
+#' @export
+assign_all_seats <- function(reps_list, assignment_tbl) {
 
   majority_seats_rep <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
     party_name = party, candidate_name = candidato)
@@ -287,28 +313,38 @@ assign_all_seats <- function(reps_list, coalitions_tbl, assignment_tbl) {
 
   to_assign <- all_seats |>
     dplyr::mutate(n_assign = 500 - sum(n_seats_total)) |>
+    dplyr::mutate(n_assign = if_else(n_assign ==0,0,200 - sum(if_else(topped,n_seats_max-n_seats_maj,0)))) |>
     dplyr::select(rep, candidate, n_assign, topped) |>
     dplyr::ungroup()
 
   # if seats left assign in second round
-  if(sum(to_assign$n_assign) > 0) {
+  while(sum(to_assign$n_assign) > 0) {
+    
     total_tbl <- total_tbl |>
-      dplyr::select(-n_assign, -topped) |>
+      dplyr::left_join(prop_seats_rep) |>
+      dplyr::select(party, prop=prop_adj,rep) |>
       dplyr::left_join(to_assign, by = c("rep", "party" = "candidate"))
+    
     prop_seats_rep <- assign_prop(total_tbl) |>
-      dplyr::select(party, rep, n_seats_new = n_seats_prop)
+      dplyr::select(party, rep, n_seats_new = n_seats_prop,prop_adj)
 
     all_seats <- all_seats |>
+      dplyr::select(rep, candidate,n_seats_maj,n_seats_prop,n_seats_max,topped) |> 
+      #dplyr::mutate(n_seats_prop = if_else(topped,n_seats_max-n_seats_maj,n_seats_prop))|>
       dplyr::left_join(prop_seats_rep, by = c("rep" = "rep", "candidate" = "party")) |>
       dplyr::mutate(
-        n_seats_raw = n_seats_raw + n_seats_new,
+        any_topped = any(topped),
+        n_seats_prop = ifelse(any_topped,ifelse(topped,n_seats_max-n_seats_maj,n_seats_new),n_seats_prop),
+        n_seats_raw = n_seats_prop + n_seats_maj,
         n_seats_total = pmin(n_seats_raw, n_seats_max),
         topped = n_seats_max == n_seats_total
       ) |>
+      dplyr::select(-any_topped) |>
       dplyr::arrange(rep)
 
     to_assign <- all_seats |>
       dplyr::mutate(n_assign = 500 - sum(n_seats_total)) |>
+      dplyr::mutate(n_assign = if_else(n_assign ==0,0,200 - sum(if_else(topped,n_seats_max-n_seats_maj,0)))) |>
       dplyr::select(rep, candidate, n_assign, topped) |>
       dplyr::ungroup()
   }
@@ -316,10 +352,13 @@ assign_all_seats <- function(reps_list, coalitions_tbl, assignment_tbl) {
   all_seats |>
     dplyr::select(rep, candidate, n_seats_maj, n_seats_prop, n_seats_total)
 }
-
-# assigns sample proportional to national voting,
-# total_tbl must include columns: n_assign seats to allocate, per replication
-# topped: whether the party has reached it's maximum number of seats
+#'
+#' @rdname assign_deputy_seats
+#' @return  `assign_prop` returns a tibble where :
+#' `rep` is the number of repetition, `party` is the name of the party, and
+#' `n_seats_prop` integer, is the number of seats assigned by proportionality and "resto mayor" for each of the parties;
+#'
+#' @export
 assign_prop <- function(total_tbl) {
   parties_ignore <- c("CNR", "NULOS", "CI")
 
