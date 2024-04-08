@@ -245,6 +245,7 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 #' `assign_all_seats`: Assigns the total of 500 seats of majority and proportional seats, checking for maximum constraints per
 # party and replication.
 #' `assign_majority`: Add column defining the majority party of the first 300 seats to each stratum and repetition.
+#' `add_max_seats`: Adds the maximum seats allowed out of the 500 seats to each party and repetition.
 #' `assign_prop`: Assigns n_assign seats to parties using proportional representation in national voting and "resto mayor".
 #' @param reps_list A named list (output of bootstrap_diputados) with elements strata_tbl and total_tbl
 #' @param estimates_strata_tbl Tibble with estimates of proportion of votes per party per repetition per stratum (output of bootstrap_diputados)
@@ -254,6 +255,9 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 #' @param total_tbl Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
 #' total_tbl must include columns: n_assign seats to allocate, per replication and
 #' topped: a logical value whether the party has reached it's maximum number of seats (TRUE)
+#' @param majority_seats_tbl Tibble with output from `assign_majority`. A tibble with columns:
+#' `rep` number of repetition, `candidate` the party, and
+#' `n_seats_maj` integer, number of seats assigned by majority for each of the parties out of the first 300;
 #'
 #' @rdname assign_deputy_seats
 #' @return  `assign_majority` returns a tibble with columns:
@@ -283,7 +287,7 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl, party_name, ca
 #'
 #' @rdname assign_deputy_seats
 #' @return  `assign_all_seats` returns a tibble with columns:
-#' `rep` number of repetition, `candidate` the party, and
+#' `rep` number of repetition, `party` the party, and
 #' `n_seats_maj` integer, number of seats assigned by majority for each of the parties out of the first 300;
 #' `n_seats_prop` integer, is the number of seats assigned by proportionality and "resto mayor", out of the 200, for each of the parties;
 #' `n_seats_total` integer, is the total number of seats, out of the 500, for each of the parties;
@@ -317,7 +321,17 @@ assign_all_seats <- function(reps_list, assignment_tbl) {
   #                 n_seats_prop, topped)
 
 }
-
+#'
+#' @rdname assign_deputy_seats
+#' @return  `add_max_seats` returns a tibble with columns:
+#' `rep` number of repetition, `party` the party, and
+#' `prop_vot_nal` normalised proportion to calculate maximum allowed;
+#' `n_seats_maj` integer, number of seats assigned by majority for each of the parties out of the first 300;
+#' `n_seats_max` integer, is the maximum number of seats allowed per party.
+#' If the party reached/passed its maximum with the majority assignment, `n_seats_max` is set to `n_seats_maj`;
+#' `topped` logical, indicates if the party has reached its maximum;
+#'
+#' @export
 add_max_seats <- function(total_tbl, majority_seats_tbl) {
 
   total_tbl <- total_tbl |>
