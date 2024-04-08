@@ -118,6 +118,7 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 
 
 ```{r}
+set.seed(9898)
 # built with info from INE, states in which strata parties compete in coalitions and
 # the party to which the candidate belongs
 assignment_tbl <- readr::read_csv("asignacion-coaliciones.csv") |> 
@@ -139,7 +140,7 @@ n_strata_tbl <- sample_diputados |>
 estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
                                  stratum_tbl = n_strata_tbl, n_stratum = n,
                                  coalitions_tbl = coalitions_tbl, 
-                                 B = 100, seed = 12,
+                                 B = 2, seed = 12,
                                  samples_table = TRUE)
 
 ```
@@ -147,9 +148,7 @@ estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
 ```{r}
 majority_seats_rep <- assign_majority(estimates$strata_tbl, assignment_tbl , 
                 party_name = party, candidate_name = candidato) |> 
-  group_by(candidate, rep) |> 
-  summarise(n_seats_maj = sum(n_seats_maj), .groups = "drop_last")
-
+  group_by(candidate, rep) 
 majority_seats_rep |>
   summarise(inf = quantile(n_seats_maj, 0.02), sup = quantile(n_seats_maj, 0.98)) |>
   arrange(-inf)
@@ -159,11 +158,24 @@ Total seats,
 ```{r}
 assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
 
+glimpse(assign_seats_rep)
+
 assign_seats_rep |> 
-  group_by(candidate) |> 
+  group_by(party) |> 
   summarise(inf = quantile(n_seats_total, 0.02), 
             sup = quantile(n_seats_total, 0.98)) |>
   arrange(-inf)  
   
+```
+```{r}
+estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
+                                 stratum_tbl = n_strata_tbl, n_stratum = n,
+                                 coalitions_tbl = coalitions_tbl, 
+                                 B = 2, seed = 12,
+                                 samples_table = TRUE)
+estimates$strata_tbl <- estimates$strata_tbl |> group_by(strata, rep) |> mutate(prop_votes = ifelse(party == "MORENA", 0.5, prop_votes))
+
+
+estimates$strata_tbl <- estimates$strata_tbl |> group_by(strata, rep) |> mutate(prop_votes = ifelse(party == "MORENA", max(prop_votes) + 0.01, prop_votes))
 ```
 

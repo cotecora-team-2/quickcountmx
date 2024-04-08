@@ -252,7 +252,7 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 #' @param party_name Unquoted variable indicating the party name.
 #' @param candidate_name Unquoted variable indicating the assigned party.
 #' @param total_tbl Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
-#' total_tbl must include columns: n_assign seats to allocate, per replication and 
+#' total_tbl must include columns: n_assign seats to allocate, per replication and
 #' topped: a logical value whether the party has reached it's maximum number of seats (TRUE)
 #'
 #' @rdname assign_deputy_seats
@@ -291,66 +291,57 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl, party_name, ca
 #' @export
 assign_all_seats <- function(reps_list, assignment_tbl) {
 
-  majority_seats_rep <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
+  majority_seats_tbl <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
     party_name = party, candidate_name = candidato)
 
-  total_tbl <- reps_list$total_tbl |>
-    dplyr::filter(party != "part") |>
-    dplyr::mutate(n_assign = 200, topped = FALSE)
+  total_tbl <- add_max_seats(reps_list$total_tbl, majority_seats_tbl)
 
-  prop_seats_rep <- assign_prop(total_tbl)
+  total_seats_tbl <- assign_prop(total_tbl)
 
-  all_seats <- majority_seats_rep |>
-    dplyr::group_by(rep) |>
-    dplyr::left_join(prop_seats_rep, by = c("rep" = "rep", "candidate" = "party")) |>
-    dplyr::mutate(
-      n_seats_max = floor(500 * (prop_adj + 0.08)),
-      n_seats_raw = n_seats_prop + n_seats_maj,
-      n_seats_total = pmin(n_seats_raw, n_seats_max),
-      topped = n_seats_max == n_seats_total
-      ) |>
-    arrange(rep)
-
-  to_assign <- all_seats |>
-    dplyr::mutate(n_assign = 500 - sum(n_seats_total)) |>
-    dplyr::mutate(n_assign = if_else(n_assign ==0,0,200 - sum(if_else(topped,n_seats_max-n_seats_maj,0)))) |>
-    dplyr::select(rep, candidate, n_assign, topped) |>
-    dplyr::ungroup()
+  to_assign <- total_seats_tbl |>
+    dplyr::summarise(miss_assign = 500 - sum(n_seats_total))
 
   # if seats left assign in second round
-  while(sum(to_assign$n_assign) > 0) {
-    
-    total_tbl <- total_tbl |>
-      dplyr::left_join(prop_seats_rep) |>
-      dplyr::select(party, prop=prop_adj,rep) |>
-      dplyr::left_join(to_assign, by = c("rep", "party" = "candidate"))
-    
-    prop_seats_rep <- assign_prop(total_tbl) |>
-      dplyr::select(party, rep, n_seats_new = n_seats_prop,prop_adj)
+  while(sum(to_assign$miss_assign) > 0) {
+    total_seats_tbl <- total_seats_tbl |>
+      dplyr::mutate(n_assign = 500 - sum(n_seats_maj) - sum(topped * n_seats_prop)) |>
+      dplyr::select(party, rep, prop_vot_nal, n_seats_maj, n_seats_max, topped, n_assign)
 
-    all_seats <- all_seats |>
-      dplyr::select(rep, candidate,n_seats_maj,n_seats_prop,n_seats_max,topped) |> 
-      #dplyr::mutate(n_seats_prop = if_else(topped,n_seats_max-n_seats_maj,n_seats_prop))|>
-      dplyr::left_join(prop_seats_rep, by = c("rep" = "rep", "candidate" = "party")) |>
-      dplyr::mutate(
-        any_topped = any(topped),
-        n_seats_prop = ifelse(any_topped,ifelse(topped,n_seats_max-n_seats_maj,n_seats_new),n_seats_prop),
-        n_seats_raw = n_seats_prop + n_seats_maj,
-        n_seats_total = pmin(n_seats_raw, n_seats_max),
-        topped = n_seats_max == n_seats_total
-      ) |>
-      dplyr::select(-any_topped) |>
-      dplyr::arrange(rep)
-
-    to_assign <- all_seats |>
-      dplyr::mutate(n_assign = 500 - sum(n_seats_total)) |>
-      dplyr::mutate(n_assign = if_else(n_assign ==0,0,200 - sum(if_else(topped,n_seats_max-n_seats_maj,0)))) |>
-      dplyr::select(rep, candidate, n_assign, topped) |>
-      dplyr::ungroup()
+    total_seats_tbl <- assign_prop(total_seats_tbl)
+    to_assign <- total_seats_tbl |>
+      dplyr::summarise(miss_assign = 500 - sum(n_seats_total))
   }
+  total_seats_tbl
+  # total_seats_tbl |>
+  #   dplyr::select(party, rep, prop, prop_vot_nal, n_seats_maj, n_seats_max,
+  #                 n_seats_prop, topped)
 
-  all_seats |>
-    dplyr::select(rep, candidate, n_seats_maj, n_seats_prop, n_seats_total)
+}
+
+add_max_seats <- function(total_tbl, majority_seats_tbl) {
+
+  total_tbl <- total_tbl |>
+    dplyr::filter(party != "part")
+
+  # These do not count towars "votacion nacional emitida", same for parties with <3%
+  parties_ignore <- c("CNR", "NULOS", "CI")
+
+  total_tbl |>
+    dplyr::group_by(rep) |>
+    dplyr::mutate(
+      #votación nal. emitida
+      prop_vot_nal = ifelse(prop < 0.03 |
+                          stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
+                        0, prop),
+      prop_vot_nal = prop_vot_nal / sum(prop_vot_nal),
+    ) |>
+    dplyr::left_join(majority_seats_tbl, by = c("rep" = "rep", "party" = "candidate")) |>
+    dplyr::mutate(
+      n_seats_max_raw = floor(500 * (prop_vot_nal + 0.08)),
+      n_seats_max = pmax(n_seats_max_raw, n_seats_maj), #we do not delete majority seats even if over limit
+      topped = n_seats_maj >= n_seats_max_raw,
+      n_assign = 200
+    )
 }
 #'
 #' @rdname assign_deputy_seats
@@ -360,19 +351,22 @@ assign_all_seats <- function(reps_list, assignment_tbl) {
 #'
 #' @export
 assign_prop <- function(total_tbl) {
-  parties_ignore <- c("CNR", "NULOS", "CI")
 
   total_tbl |>
     dplyr::group_by(rep) |>
     dplyr::mutate(
-      prop_adj = ifelse(prop < 0.03 | topped |
-        stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
-        0, prop),
+      prop_adj = ifelse(topped, 0, prop_vot_nal),
       prop_adj = prop_adj / sum(prop_adj),
-      n_seats_prop = floor(n_assign * prop_adj),
-      resto = n_assign * prop_adj - n_seats_prop,
-      to_distribute = ifelse(n_assign > 0, n_assign - sum(n_seats_prop), 0),
+      n_seats_prop_raw = floor(n_assign * prop_adj),
+      resto = n_assign * prop_adj - n_seats_prop_raw,
+      to_distribute = ifelse(n_assign > 0, n_assign - sum(n_seats_prop_raw), 0),
       rank_resto = dplyr::row_number(-resto),
-      n_seats_prop = ifelse(rank_resto <= to_distribute, n_seats_prop + 1, n_seats_prop)
+      n_seats_prop_raw = ifelse(rank_resto <= to_distribute, n_seats_prop_raw + 1, n_seats_prop_raw)
+    ) |>
+    dplyr::mutate(
+      n_seats_prop = ifelse(topped, n_seats_max - n_seats_maj,
+                            pmin(n_seats_max - n_seats_maj, n_seats_prop_raw)),
+      n_seats_total = ifelse(topped, n_seats_max, n_seats_prop + n_seats_maj),
+      topped = n_seats_max <= n_seats_total
     )
 }

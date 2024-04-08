@@ -61,3 +61,4 @@ test_that("bootstrap majority assignment", {
                                    party_name = party, candidate_name = candidate)
   expect_equal(assigment_tbl$party[1:4], c("x", "x", "y", "z"))
  })
+

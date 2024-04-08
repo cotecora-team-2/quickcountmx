@@ -58,6 +58,15 @@ total_tbl_LE <- theta_long |>
   left_join(nombres_partido) |>
   select(party, prop = lambda, rep = sim)|>
   dplyr::filter(party != "part") |>
+  mutate(
+    prop_vot_nal = ifelse(prop < 0.03 |
+                            stringr::str_detect(party, "CI"),
+                          0, prop),
+    prop_vot_nal = prop_vot_nal / sum(prop_vot_nal),
+    n_seats_max = floor(500 * (prop_vot_nal + 0.08))
+  ) |>
+  left_join(nd1_long_qc, by = c("party" = "nombre_partido", "rep" = "sim")) |>
+  rename(n_seats_maj = nd1) |>
   dplyr::mutate(n_assign = 200, topped = FALSE)
 
 # run assign_prop in test data
