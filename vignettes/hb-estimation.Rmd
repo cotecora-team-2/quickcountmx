@@ -45,7 +45,7 @@ conteo <- conteo %>%
   mutate(distrito_f = interaction(ID_ESTADO, ID_DISTRITO)) %>% 
   mutate(OTROS = VN + CNR + CAND_IND_01) %>% 
   mutate(no_casilla = row_number()) %>% 
-  mutate(ln = ifelse(LISTA_NOMINAL_CASILLA==0, 1200, LISTA_NOMINAL_CASILLA)) |> 
+  mutate(ln = LISTA_NOMINAL_CASILLA) |> 
   mutate(tipo_1 = ifelse(tipo_seccion == 1, 1, 0)) |> 
   mutate(tipo_2 = ifelse(tipo_seccion == 2, 2, 0)) |> 
   mutate(casilla_e = ifelse(tipo_casilla == "E", 1, 0))
@@ -84,6 +84,8 @@ fit_estimates <- hb_estimation(sample, stratum = distrito_f,
                       num_warmup = 200,
                       num_iter = 200, 
                       adapt_delta = 0.8,
+                      return_fit = FALSE, 
+                      nominal_max = 1200,
                       # increase chains and num_iter
                       seed = 123)
 ```
