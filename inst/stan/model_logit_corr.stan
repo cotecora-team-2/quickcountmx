@@ -72,11 +72,13 @@ parameters {
 }
 
 transformed parameters {
-   matrix[N,p] pred;
-   array[N] vector[p] theta;
-   array[p] vector[N] alpha_bn;
    array[p] matrix[n_strata_f, n_covariates_f + 1] beta;
    matrix[n_strata_f, p] kappa;
+   array[p] vector[N] alpha_bn;
+
+  {
+   matrix[N,p] pred;
+   array[N] vector[p] theta;
 
    // polling station level turnout
    //beta_part_prop = rep_matrix(beta_0_part_prop, n_strata_f)' + (diag_pre_multiply(sigma_part_prop, part_Omega_prop) * beta_part_prop_raw)';
@@ -102,7 +104,7 @@ transformed parameters {
 
    // overdispersion over strata
    kappa = exp(rep_matrix(kappa_0, n_strata_f) + diag_post_multiply(kappa_st_raw, sigma_kappa));
-
+  }
 
 }
 
@@ -134,15 +136,15 @@ model {
 generated quantities {
   vector[p] y_out;
   array[p] real prop_votos;
+  real participacion;
+  real sum_votes;
+
+  {
+// party vote
   vector[p] theta_f;
   vector[p] alpha_bn_f;
   vector[p] pred_f;
   vector[p] w_bias;
-  array[N_f] real total_est;
-  real participacion;
-  real sum_votes;
-
-// party vote
 
   for(k in 1:p){
     y_out[k] = 0.0;
@@ -173,6 +175,7 @@ generated quantities {
     prop_votos[k] = y_out[k] / sum_votes;
   }
   participacion = sum_votes / total_nominal;
+  }
 }
 
 
