@@ -77,17 +77,15 @@ parameters {
 }
 
 transformed parameters {
-   matrix[N,p] pred;
-   array[N] simplex[p] theta;
    array[p] vector<lower=0>[N] alpha_bn;
    array[p] matrix[n_strata_f, n_covariates_f + 1] beta;
-   matrix<lower=0>[n_strata_f, p] kappa;
-   //matrix[n_strata_f, n_covariates_f + 1] beta_part;
    matrix[n_strata_f, n_covariates_f + 1] beta_part_prop;
-   //vector<lower=0, upper = 1>[N] theta_part;
-   vector<lower=0, upper = 1>[N] theta_part_prop;
-   //vector<lower=0>[N] alpha_bn_part;
-   //vector[N] pred_part;
+   matrix<lower=0>[n_strata_f, p] kappa;
+
+  {
+   matrix[N,p] pred;
+   array[N] vector[p] theta;
+   vector[N] theta_part_prop;
    vector[N] pred_part_prop;
 
    // polling station level turnout
@@ -116,7 +114,7 @@ transformed parameters {
    // overdispersion over strata
    kappa = exp(rep_matrix(kappa_0, n_strata_f) + diag_post_multiply(kappa_st_raw, sigma_kappa));
 
-
+  }
 }
 
 model {
@@ -151,16 +149,16 @@ model {
 generated quantities {
   vector[p] y_out;
   array[p] real prop_votos;
+  real participacion;
+  real sum_votes;
+
+  {
   vector[p] theta_f;
   vector[p] alpha_bn_f;
   vector[p] pred_f;
   real pred_f_part_prop;
   array[N_f] real theta_f_total_prop;
   vector[p] w_bias;
-  array[N_f] real total_est;
-  real participacion;
-  real sum_votes;
-
 
   for(i in 1:N_f){
       if(in_sample[i] == 0){
@@ -200,6 +198,7 @@ generated quantities {
     prop_votos[k] = y_out[k] / sum_votes;
   }
   participacion = sum_votes / total_nominal;
+  }
 }
 
 

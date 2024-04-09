@@ -26,11 +26,13 @@
 #' @param adapt_delta The adaptation target acceptance statistic (default 0.80.
 #' @param max_treedepth The maximum allowed tree depth for the NUTS engine (default 10)
 #' @param chains Number of chains (will be run in parallel)
+#' @param sig_figs Number of significant figures for Stan output
 #' @param model One of "mlogit" (the default) or "logit"
 #' @param nominal_max Maximum number of nominal count for stations. Used for
 #' stations without fixed nominal list.
 #' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
 #' @param threads_per_chain Number of threads per chain to split calculation of log-posterior
+#' @param erase_output_files If TRUE, output files are erased after fitting
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
 #'   and limits of credible intervals, and a vector inv_metric for the model
@@ -41,9 +43,14 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           covariates,
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
-                          max_treedepth = 10,
-                          chains = 3, model = "mlogit-corr", nominal_max = 1000,
-                          threads_per_chain = 1, inv_metric = NULL){
+                          max_treedepth = 10, chains = 3, sig_figs = 6,
+                          model = "mlogit-corr", nominal_max = 1000,
+                          threads_per_chain = 1, inv_metric = NULL,
+                          erase_output_files = TRUE){
+                          max_treedepth = 10, chains = 3, sig_figs = 6,
+                          model = "mlogit-corr", nominal_max = 1200,
+                          threads_per_chain = 1, inv_metric = NULL,
+                          erase_output_files = TRUE){
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -105,6 +112,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                       step_size = 0.01,
                       adapt_delta = adapt_delta,
                       max_treedepth = max_treedepth,
+                      sig_figs = sig_figs,
                       inv_metric = inv_metric,
                       threads_per_chain = threads_per_chain)
   output <- list()
@@ -122,7 +130,9 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   estimates_tbl$party <- c(parties_name, "part")
   print(estimates_tbl)
   output$estimates <- estimates_tbl
-  file.remove(fit$output_files())
+  if(erase_output_files){
+    file.remove(fit$output_files())
+  }
   return(output)
 }
 
@@ -142,6 +152,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' @param split_var unquoted name of variable that splits sampling frame and data
 #' @param num_cores Number of cores to use for parallel computation
 #' @param inv_metric_list List of inv_metric diagonals guesses for each split
+#' @param sig_figs Number of significant figures for Stan output
 #' @param ... Other parameters passed to hb_estimation.
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
@@ -149,8 +160,10 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
-hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL, num_cores = 5,
-                                   inv_metric_list = NULL, ...){
+hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
+                                   nominal_list_var = NULL, num_cores = 5,
+                                   inv_metric_list = NULL,
+                                   sig_figs = 8, ...){
 
   sampling_frame <- sampling_frame %>%
     ungroup() %>%
@@ -176,15 +189,17 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL, n
       inv_metric_slice <- NULL
     }
     fit_slice <- hb_estimation(sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
-                         inv_metric = inv_metric_slice,
-                         return_fit = TRUE, ...)
+                         inv_metric = inv_metric_slice, erase_output_files = FALSE,
+                         return_fit = TRUE, sig_figs = sig_figs, ...)
     parties_names <- fit_slice$estimates$party
    y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
      as_tibble() |>
      mutate(region = region_name)
    estimates_slice <- fit_slice$estimates |> mutate(region = region_name)
-   list(fit = fit_slice, y_out = y_out_tbl, parties_names = parties_names,
+   res_slice <- list(fit = fit_slice, y_out = y_out_tbl, parties_names = parties_names,
         estimates_slice = estimates_slice, region_name = region_name)
+   file.remove(fit_slice$fit$output_files())
+   res_slice
   }, mc.cores = num_cores)
   y_out_tbl <- bind_rows(res_list |> purrr::map( ~.x$y_out)) |>
     group_by(.draw) |>
@@ -192,7 +207,8 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL, n
     pivot_longer(cols = contains("y_out"), names_to = "party", values_to = "votes") |>
     group_by(.draw) |>
     mutate(total_votes = sum(votes)) |>
-    mutate(prop_votes = votes / total_votes)
+    mutate(prop_votes = votes / total_votes) |>
+    ungroup()
   estimates_tbl <- y_out_tbl |>
     group_by(party) |>
     summarise(median = mean(prop_votes),
