@@ -8,8 +8,10 @@ hb_estimation_parallel(
   data_tbl,
   sampling_frame,
   split_var = NULL,
+  nominal_list_var = NULL,
   num_cores = 5,
   inv_metric_list = NULL,
+  sig_figs = 8,
   ...
 )
 }
@@ -24,6 +26,8 @@ hb_estimation_parallel(
 \item{num_cores}{Number of cores to use for parallel computation}
 
 \item{inv_metric_list}{List of inv_metric diagonals guesses for each split}
+
+\item{sig_figs}{Number of significant figures for Stan output}
 
 \item{...}{Other parameters passed to hb_estimation.}
 }
