@@ -11,7 +11,8 @@ hb_estimation_parallel(
   nominal_list_var = NULL,
   num_cores = 5,
   inv_metric_list = NULL,
-  sig_figs = 8,
+  nominal_max = 1000,
+  sig_figs = 7,
   ...
 )
 }
@@ -28,6 +29,9 @@ hb_estimation_parallel(
 \item{num_cores}{Number of cores to use for parallel computation}
 
 \item{inv_metric_list}{List of inv_metric diagonals guesses for each split}
+
+\item{nominal_max}{Maximum number of nominal count for stations. Used for
+stations without fixed nominal list.}
 
 \item{sig_figs}{Number of significant figures for Stan output}
 

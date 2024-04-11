@@ -21,7 +21,7 @@ hb_estimation(
   chains = 3,
   sig_figs = 6,
   model = "mlogit-corr",
-  nominal_max = 1200,
+  nominal_max = 1000,
   threads_per_chain = 1,
   inv_metric = NULL,
   erase_output_files = TRUE
