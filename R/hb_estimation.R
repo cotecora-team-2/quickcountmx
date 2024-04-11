@@ -44,7 +44,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10, chains = 3, sig_figs = 6,
-                          model = "mlogit-corr", nominal_max = 1200,
+                          model = "mlogit-corr", nominal_max = 1000,
                           threads_per_chain = 1, inv_metric = NULL,
                           erase_output_files = TRUE){
 
@@ -145,8 +145,11 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' @param sampling_frame \code{tibble} of sampling frame with stratum variable (named exactly as in
 #'   \code{data_tbl}) and covariates.
 #' @param split_var unquoted name of variable that splits sampling frame and data
+#' @param nominal_list_var Unquoted name of variable with nominal list of voters
 #' @param num_cores Number of cores to use for parallel computation
 #' @param inv_metric_list List of inv_metric diagonals guesses for each split
+#' @param nominal_max Maximum number of nominal count for stations. Used for
+#' stations without fixed nominal list.
 #' @param sig_figs Number of significant figures for Stan output
 #' @param nominal_list_var Unquoted name of variable with nominal list of voters
 #' @param ... Other parameters passed to hb_estimation.
@@ -158,12 +161,18 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' @export
 hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
                                    nominal_list_var = NULL, num_cores = 5,
-                                   inv_metric_list = NULL,
-                                   sig_figs = 8, ...){
+                                   inv_metric_list = NULL, nominal_max = 1000,
+                                   sig_figs = 7, ...){
 
   sampling_frame <- sampling_frame %>%
     ungroup() %>%
-    rename(region = {{ split_var }})
+    rename(region = {{ split_var }}) %>%
+    rename(nominal_list = {{ nominal_list_var }})
+
+  total_nominal <- sampling_frame |>
+    filter(nominal_list != nominal_max) |>
+    summarise(total_nominal = sum(nominal_list, na.rm = TRUE)) |>
+    pull(total_nominal)
 
   data_tbl <- data_tbl %>%
     ungroup() %>%
@@ -186,7 +195,7 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     }
     fit_slice <- hb_estimation(sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
                          inv_metric = inv_metric_slice, erase_output_files = FALSE,
-                         return_fit = TRUE, sig_figs = sig_figs, ...)
+                         return_fit = TRUE, nominal_max = nominal_max, sig_figs = sig_figs, ...)
     parties_names <- fit_slice$estimates$party
    y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
      as_tibble() |>
@@ -205,14 +214,19 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     mutate(total_votes = sum(votes)) |>
     mutate(prop_votes = votes / total_votes) |>
     ungroup()
-  estimates_tbl <- y_out_tbl |>
+  part_tbl <- y_out_tbl |>
+    group_by(.draw) |>
+    summarise(total_votes = first(total_votes)) |>
+    mutate(prop_votes = total_votes / total_nominal) |>
+    mutate(party = "part")
+  estimates_tbl <- y_out_tbl |> bind_rows(part_tbl) |>
     group_by(party) |>
     summarise(median = mean(prop_votes),
               inf = quantile(prop_votes, probs = 0.02),
               sup = quantile(prop_votes, probs = 0.98))
   output <- list()
   region_names <- res_list |> purrr::map( ~.x$region_name)
-  estimates_tbl$party <- head(res_list[[1]]$parties_names, -1)
+  estimates_tbl$party <- c("part", head(res_list[[1]]$parties_names, -1))
   output$estimates <- estimates_tbl
   inv_metric_list <- res_list |> purrr::map(~.x$fit) |> purrr::map( ~.x$inv_metric)
   names(inv_metric_list) <- region_names
