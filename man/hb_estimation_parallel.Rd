@@ -23,6 +23,8 @@ hb_estimation_parallel(
 
 \item{split_var}{unquoted name of variable that splits sampling frame and data}
 
+\item{nominal_list_var}{Unquoted name of variable with nominal list of voters}
+
 \item{num_cores}{Number of cores to use for parallel computation}
 
 \item{inv_metric_list}{List of inv_metric diagonals guesses for each split}

@@ -149,6 +149,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' @param num_cores Number of cores to use for parallel computation
 #' @param inv_metric_list List of inv_metric diagonals guesses for each split
 #' @param sig_figs Number of significant figures for Stan output
+#' @param nominal_list_var Unquoted name of variable with nominal list of voters
 #' @param ... Other parameters passed to hb_estimation.
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
