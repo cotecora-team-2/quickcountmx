@@ -35,6 +35,10 @@ assign_prop(total_tbl)
 \item{total_tbl}{Tibble with estimates of proportion of votes per party per repetition (output of bootstrap_diputados)
 total_tbl must include columns: n_assign seats to allocate, per replication and
 topped: a logical value whether the party has reached it's maximum number of seats (TRUE)}
+
+\item{majority_seats_tbl}{Tibble with output from \code{assign_majority}. A tibble with columns:
+\code{rep} number of repetition, \code{candidate} the party, and
+\code{n_seats_maj} integer, number of seats assigned by majority for each of the parties out of the first 300;}
 }
 \value{
 \code{assign_majority} returns a tibble with columns:
@@ -42,18 +46,18 @@ topped: a logical value whether the party has reached it's maximum number of sea
 \code{n_seats_maj} integer, number of seats assigned by majority for each of the parties out of the first 300;
 
 \code{assign_all_seats} returns a tibble with columns:
-\code{rep} number of repetition, \code{candidate} the party, and
+\code{rep} number of repetition, \code{party} the party, and
 \code{n_seats_maj} integer, number of seats assigned by majority for each of the parties out of the first 300;
 \code{n_seats_prop} integer, is the number of seats assigned by proportionality and "resto mayor", out of the 200, for each of the parties;
 \code{n_seats_total} integer, is the total number of seats, out of the 500, for each of the parties;
 
-\code{add_max_seats} auxiliary function that adds maximum number of seats
-that can be assigned for a given party. Added columns:
-\code{rep} number of repetition, \code{candidate} the party, and
-\code{n_seats_max_raw} integer, maximum number of seats that can be assigned based on proportional assignment.
-\code{n_seats_max} integer, is the maximum number of seats accounting for majority seats, can be larger than n_seats_max_raw.
-\code{topped} logical, whether the party has reached its maximum number of seats with majority seats.
-\code{n_assign} integer, overall number of seats to assign with proportional quota.
+\code{add_max_seats} returns a tibble with columns:
+\code{rep} number of repetition, \code{party} the party, and
+\code{prop_vot_nal} normalised proportion to calculate maximum allowed;
+\code{n_seats_maj} integer, number of seats assigned by majority for each of the parties out of the first 300;
+\code{n_seats_max} integer, is the maximum number of seats allowed per party.
+If the party reached/passed its maximum with the majority assignment, \code{n_seats_max} is set to \code{n_seats_maj};
+\code{topped} logical, indicates if the party has reached its maximum;
 
 \code{assign_prop} returns a tibble where :
 \code{rep} is the number of repetition, \code{party} is the name of the party, and
@@ -66,5 +70,6 @@ There are 500 seats to be assigned in the Chamber of Deputies in Mexico.
 The process involves different steps.
 \code{assign_all_seats}: Assigns the total of 500 seats of majority and proportional seats, checking for maximum constraints per
 \code{assign_majority}: Add column defining the majority party of the first 300 seats to each stratum and repetition.
+\code{add_max_seats}: Adds the maximum seats allowed out of the 500 seats to each party and repetition.
 \code{assign_prop}: Assigns n_assign seats to parties using proportional representation in national voting and "resto mayor".
 }
