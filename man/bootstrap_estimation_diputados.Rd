@@ -16,6 +16,37 @@ bootstrap_estimation_diputados(
   samples_table = FALSE
 )
 }
+\arguments{
+\item{data_tbl}{\code{tibble}}
+
+\item{stratum}{Unquoted variable indicating the stratum for each polling
+station.}
+
+\item{stratum_tbl}{Data frame with stratum variable (named exactly as in
+\code{data}) and number of polling stations per strata.}
+
+\item{n_stratum}{Unquoted variable indicating the number of polling stations
+in each stratum.}
+
+\item{coalitions_tbl}{Tibble with coalitions names and corresponding parties.}
+
+\item{assignment_tbl}{data.frame indicating the strata where coalitions apply
+and the candidate assigned to each. Party columns must be named party, the candidate party
+must be named party.}
+
+\item{B}{Number of bootstrap replicates,
+defaults to 50.}
+
+\item{seed}{integer value used to set the state of the random number
+generator (optional).}
+
+\item{samples_table}{logical indicating if the function should return the samples
+as a list of tibbles for bootstrap samples}
+}
+\value{
+A \code{list} including two componentes: point estimates at national level
+and at stratum level, and bootstrap replications of these quantities.
+}
 \description{
 Compute bootstrap confidence intervals using ratio estimator for each party at national level,
 along with proportion of votes for each stratum and party.

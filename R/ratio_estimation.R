@@ -276,7 +276,7 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl, party_name, ca
     group_by(rep, strata, candidate) |>
     summarise(prop_votes = sum(prop_votes), .groups = "drop_last") |>
     mutate(
-      prop_votes_aux = prop_votes + runif(dplyr::n(), 0, 1e-8), # fix ties
+      prop_votes_aux = prop_votes + stats::runif(dplyr::n(), 0, 1e-8), # fix ties
       is_majority = prop_votes_aux == max(prop_votes_aux)) |>
     ungroup() |>
     select(-prop_votes_aux) |>
@@ -387,7 +387,10 @@ assign_prop <- function(total_tbl) {
 #'
 #' Compute bootstrap confidence intervals using ratio estimator for each party at national level,
 #' along with proportion of votes for each stratum and party.
-#' @inherit bootstap_diputados
+#' @inherit bootstrap_diputados
+#' @param assignment_tbl data.frame indicating the strata where coalitions apply
+#' and the candidate assigned to each. Party columns must be named party, the candidate party
+#' must be named party.
 #' @export
 bootstrap_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
                                            coalitions_tbl, assignment_tbl, B = 50, seed = NA,
@@ -396,13 +399,23 @@ bootstrap_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_str
                                    stratum_tbl = stratum_tbl, n_stratum = {{n_stratum}},
                                    coalitions_tbl = coalitions_tbl,
                                    B = B, seed = seed, samples_table = samples_table)
+
   assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
+  part_tbl <- estimates$total_tbl |>
+    filter(party == "part") |>
+    group_by(party) |>
+    dplyr::summarise(dplyr::across(c(prop), list(median = median,
+                                                 inf = ~ quantile(., 0.02),
+                                                 sup = ~ quantile(., 0.98)))) |>
+    ungroup()
 
   assign_seats_rep |>
     dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "CI", party)) |>
     dplyr::group_by(party) |>
     dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
                                                   inf = ~ quantile(., 0.02),
-                                                  sup = ~ quantile(., 0.98))))
+                                                  sup = ~ quantile(., 0.98)))) |>
+    ungroup() |>
+    dplyr::bind_rows(part_tbl)
 
 }
