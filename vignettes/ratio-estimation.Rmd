@@ -114,3 +114,77 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 ```
 
 
+## Estimation for seats of diputados
+
+Prepare data
+
+```{r}
+set.seed(9898)
+# built with info from INE, states in which strata parties compete in coalitions and
+# the party to which the candidate belongs
+assignment_tbl <- readr::read_csv("asignacion-coaliciones.csv") |> 
+  rename(party = nombre_partido) |> mutate(strata = paste(ID_ENTIDAD, DISTRITO, sep = "."))
+  
+sample_diputados <- readr::read_delim("REMESAS0400062235.txt", 
+    delim = "|", escape_double = FALSE, trim_ws = TRUE, 
+    skip = 1) |> 
+  mutate(distrito_f = paste(ID_ESTADO, ID_DISTRITO_FEDERAL, sep = "."))
+
+coalitions_tbl <- tibble(coalition = names(sample_diputados)[16:36]) |> 
+  mutate(party = coalition) |> 
+  tidyr::separate_longer_delim(party, delim = "_")
+
+n_strata_tbl <- sample_diputados |> 
+  group_by(distrito_f) |> 
+  count(name = "n_strat")
+```
+
+Bootstrap replicates:
+
+```{r}
+replicates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
+                                  stratum_tbl = n_strata_tbl, n_stratum = n_strat,
+                                  coalitions_tbl = coalitions_tbl, 
+                                  B = 20, seed = 12,
+                                  samples_table = TRUE)
+```
+
+Computing majority seats
+
+```{r}
+majority_seats_rep <- assign_majority(replicates$strata_tbl, assignment_tbl , 
+                party_name = party, candidate_name = candidato) 
+majority_seats_rep |>
+  group_by(candidate) |> 
+  summarise(inf = quantile(n_seats_maj, 0.02), 
+            sup = quantile(n_seats_maj, 0.98))
+
+```
+Total seats,
+
+```{r}
+assign_seats_rep <- assign_all_seats(replicates, assignment_tbl)
+
+glimpse(assign_seats_rep)
+
+assign_seats_rep |> 
+  group_by(party) |> 
+  summarise(inf = quantile(n_seats_total, 0.02), 
+            sup = quantile(n_seats_total, 0.98)) |>
+  arrange(-inf)  
+  
+```
+All steps in a single function:
+
+```{r}
+estimates <- bootstrap_estimation_diputados(sample_diputados, stratum = distrito_f,
+                                            stratum_tbl = n_strata_tbl, n_stratum = n_strat,
+                                            coalitions_tbl = coalitions_tbl, 
+                                            assignment_tbl = assignment_tbl,
+                                            B = 20, seed = 12,
+                                            samples_table = TRUE)
+
+estimates |> 
+  mutate(across(where(is.double), ~round(., 3)))
+```
+
