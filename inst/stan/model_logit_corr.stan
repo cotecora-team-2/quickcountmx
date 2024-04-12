@@ -163,6 +163,9 @@ generated quantities {
      alpha_bn_f = n_f[i] * theta_f;
      for (k in 1:p) {
        temp_y_out[k] = neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
+       if(temp_y_out[k] > n_f[i]){
+           temp_y_out[k] = n_f[i];
+         }
      }
     }
     real sum_temp_y_out = sum(temp_y_out);
