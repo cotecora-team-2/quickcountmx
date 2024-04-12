@@ -8,6 +8,7 @@ data {
   array[N_f, p] int<lower=0> y_f; // vote counts
   array[N_f] int in_sample;
   vector<lower=0>[N_f] n_f; // nominal counts
+  array[N_f] int ln_zero_f;
   int<lower=0> nominal_max;
   array[N_f] int stratum_f;
   matrix[N_f, n_covariates_f] x_f;
@@ -48,7 +49,7 @@ transformed data {
   }
   total_nominal = 0;
   for(i in 1:N_f){
-    if(n_f[i] < nominal_max){
+    if(ln_zero_f[i] == 0){
       total_nominal += n_f[i];
     }
   }
