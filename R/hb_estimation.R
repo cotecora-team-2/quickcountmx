@@ -44,7 +44,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10, chains = 3, sig_figs = 6,
-                          model = "mlogit-corr", nominal_max = 1200,
+                          model = "mlogit-corr", nominal_max = 1000,
                           threads_per_chain = 1, inv_metric = NULL,
                           erase_output_files = TRUE){
 
@@ -68,6 +68,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 
   data_list <- create_hb_data(data_tbl, sampling_frame,
                               parties = {{parties}}, covariates = {{covariates}},
+                              nominal_max = nominal_max,
                               prop_obs = prop_obs)
   stan_data <- c(parameters, data_list)
   parties_name <- stan_data$parties_name
@@ -224,7 +225,7 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
 }
 
 
-create_hb_data <- function(data_tbl, sampling_frame, parties,
+create_hb_data <- function(data_tbl, sampling_frame, parties, nominal_max,
                              covariates, prop_obs = 0.995){
   levels_strata_f <- unique(sampling_frame$strata)
   sampling_frame <- sampling_frame %>%
@@ -249,7 +250,9 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   stan_data$p <- ncol(votes_frame_tbl)
   stan_data$y_f <- votes_frame_tbl %>% as.matrix()
   stan_data$in_sample <- in_sample
-  stan_data$n_f <- sampling_frame$ln
+  #stan_data$n_f <- sampling_frame$ln
+  stan_data$n_f <- ifelse(sampling_frame$ln == 0, nominal_max, sampling_frame$ln)
+  stan_data$ln_zero_f <- ifelse(sampling_frame$ln == 0, 1, 0)
   stan_data$stratum_f <- sampling_frame$strata_num_f
   stan_data$x_f <- sampling_frame %>% select({{ covariates }}) %>%
     as.matrix()
@@ -260,7 +263,9 @@ create_hb_data <- function(data_tbl, sampling_frame, parties,
   stan_data$x <- stan_data$x_f[in_sample==1, , drop = FALSE]
   stan_data$stratum <- stan_data$stratum_f[in_sample == 1]
   stan_data$n <- stan_data$n_f[in_sample == 1]
+  stan_data$n <- ifelse(stan_data$n == 0, nominal_max, stan_data$n)
   stan_data$p_obs <- prop_obs
+
 
   return(stan_data)
 }

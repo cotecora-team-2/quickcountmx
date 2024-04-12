@@ -20,7 +20,7 @@ process_batch(
   n_warmup = 200,
   adapt_delta = 0.8,
   max_treedepth = 10,
-  nominal_max = 1200,
+  nominal_max = 1000,
   seed = 221285,
   inv_metric_file = NULL
 )
