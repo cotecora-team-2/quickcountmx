@@ -170,7 +170,6 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     rename(nominal_list = {{ nominal_list_var }})
 
   total_nominal <- sampling_frame |>
-    filter(nominal_list != nominal_max) |>
     summarise(total_nominal = sum(nominal_list, na.rm = TRUE)) |>
     pull(total_nominal)
 
@@ -226,7 +225,6 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
               sup = quantile(prop_votes, probs = 0.98))
   output <- list()
   region_names <- res_list |> purrr::map( ~.x$region_name)
-  estimates_tbl$party <- c("part", head(res_list[[1]]$parties_names, -1))
   output$estimates <- estimates_tbl
   inv_metric_list <- res_list |> purrr::map(~.x$fit) |> purrr::map( ~.x$inv_metric)
   names(inv_metric_list) <- region_names
