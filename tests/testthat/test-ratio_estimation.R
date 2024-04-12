@@ -59,6 +59,6 @@ test_that("bootstrap majority assignment", {
     mutate(candidate = ifelse(strata == "B" & candidate != "z", "x", candidate))
   assigment_tbl <- assign_majority(estimates$strata_tbl, assignment_coalitions_tbl,
                                    party_name = party, candidate_name = candidate)
-  expect_equal(assigment_tbl$party[1:4], c("x", "x", "y", "z"))
+  expect_equal(assigment_tbl$candidate[1:4], c("x", "y", "z", "x"))
  })
 

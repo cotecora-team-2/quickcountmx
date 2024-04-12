@@ -116,6 +116,7 @@ estimates %>% mutate(across(where(is.numeric), ~round(.x, 2)))
 
 ## Estimation for seats of diputados
 
+Prepare data
 
 ```{r}
 set.seed(9898)
@@ -135,28 +136,34 @@ coalitions_tbl <- tibble(coalition = names(sample_diputados)[16:36]) |>
 
 n_strata_tbl <- sample_diputados |> 
   group_by(distrito_f) |> 
-  count()
-
-estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
-                                 stratum_tbl = n_strata_tbl, n_stratum = n,
-                                 coalitions_tbl = coalitions_tbl, 
-                                 B = 2, seed = 12,
-                                 samples_table = TRUE)
-
+  count(name = "n_strat")
 ```
 
+Bootstrap replicates:
+
 ```{r}
-majority_seats_rep <- assign_majority(estimates$strata_tbl, assignment_tbl , 
-                party_name = party, candidate_name = candidato) |> 
-  group_by(candidate, rep) 
+replicates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
+                                  stratum_tbl = n_strata_tbl, n_stratum = n_strat,
+                                  coalitions_tbl = coalitions_tbl, 
+                                  B = 20, seed = 12,
+                                  samples_table = TRUE)
+```
+
+Computing majority seats
+
+```{r}
+majority_seats_rep <- assign_majority(replicates$strata_tbl, assignment_tbl , 
+                party_name = party, candidate_name = candidato) 
 majority_seats_rep |>
-  summarise(inf = quantile(n_seats_maj, 0.02), sup = quantile(n_seats_maj, 0.98)) |>
-  arrange(-inf)
+  group_by(candidate) |> 
+  summarise(inf = quantile(n_seats_maj, 0.02), 
+            sup = quantile(n_seats_maj, 0.98))
+
 ```
 Total seats,
 
 ```{r}
-assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
+assign_seats_rep <- assign_all_seats(replicates, assignment_tbl)
 
 glimpse(assign_seats_rep)
 
@@ -168,14 +175,14 @@ assign_seats_rep |>
   
 ```
 ```{r}
-estimates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
-                                 stratum_tbl = n_strata_tbl, n_stratum = n,
-                                 coalitions_tbl = coalitions_tbl, 
-                                 B = 2, seed = 12,
-                                 samples_table = TRUE)
-estimates$strata_tbl <- estimates$strata_tbl |> group_by(strata, rep) |> mutate(prop_votes = ifelse(party == "MORENA", 0.5, prop_votes))
+estimates <- bootstrap_estimation_diputados(sample_diputados, stratum = distrito_f,
+                                            stratum_tbl = n_strata_tbl, n_stratum = n_strat,
+                                            coalitions_tbl = coalitions_tbl, 
+                                            assignment_tbl = assignment_tbl,
+                                            B = 20, seed = 12,
+                                            samples_table = TRUE)
 
-
-estimates$strata_tbl <- estimates$strata_tbl |> group_by(strata, rep) |> mutate(prop_votes = ifelse(party == "MORENA", max(prop_votes) + 0.01, prop_votes))
+estimates |> 
+  mutate(across(where(is.double), ~round(., 3)))
 ```
 

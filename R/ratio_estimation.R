@@ -280,7 +280,7 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl, party_name, ca
     summarise(n_seats_maj = sum(is_majority), .groups = "drop")
   aggregate_coalitions_tbl
 }
-#'
+
 #' @rdname assign_deputy_seats
 #' @return  `assign_all_seats` returns a tibble with columns:
 #' `rep` number of repetition, `candidate` the party, and
@@ -312,12 +312,18 @@ assign_all_seats <- function(reps_list, assignment_tbl) {
       dplyr::summarise(miss_assign = 500 - sum(n_seats_total))
   }
   total_seats_tbl
-  # total_seats_tbl |>
-  #   dplyr::select(party, rep, prop, prop_vot_nal, n_seats_maj, n_seats_max,
-  #                 n_seats_prop, topped)
-
 }
 
+#' @rdname assign_deputy_seats
+#' @return  `add_max_seats` auxiliary function that adds maximum number of seats
+#' that can be assigned for a given party. Added columns:
+#' `rep` number of repetition, `candidate` the party, and
+#' `n_seats_max_raw` integer, maximum number of seats that can be assigned based on proportional assignment.
+#' `n_seats_max` integer, is the maximum number of seats accounting for majority seats, can be larger than n_seats_max_raw.
+#' `topped` logical, whether the party has reached its maximum number of seats with majority seats.
+#' `n_assign` integer, overall number of seats to assign with proportional quota.
+#'
+#' @export
 add_max_seats <- function(total_tbl, majority_seats_tbl) {
 
   total_tbl <- total_tbl |>
@@ -348,6 +354,8 @@ add_max_seats <- function(total_tbl, majority_seats_tbl) {
 #' @return  `assign_prop` returns a tibble where :
 #' `rep` is the number of repetition, `party` is the name of the party, and
 #' `n_seats_prop` integer, is the number of seats assigned by proportionality and "resto mayor" for each of the parties;
+#' `n_seats_total` integer, is the number of seats assigned by majority and proportional;
+#' `topped` logical, indicates if a party has reached its maximum number of seats;
 #'
 #' @export
 assign_prop <- function(total_tbl) {
@@ -369,4 +377,28 @@ assign_prop <- function(total_tbl) {
       n_seats_total = ifelse(topped, n_seats_max, n_seats_prop + n_seats_maj),
       topped = n_seats_max <= n_seats_total
     )
+}
+
+#' Bootstrap estimates for diputados
+#'
+#' Compute bootstrap confidence intervals using ratio estimator for each party at national level,
+#' along with proportion of votes for each stratum and party.
+#' @inherit bootstap_diputados
+#' @export
+bootstrap_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
+                                           coalitions_tbl, assignment_tbl, B = 50, seed = NA,
+                                           samples_table = FALSE) {
+  estimates <- bootstrap_diputados(data_tbl = data_tbl, stratum = {{stratum}},
+                                   stratum_tbl = stratum_tbl, n_stratum = {{n_stratum}},
+                                   coalitions_tbl = coalitions_tbl,
+                                   B = B, seed = seed, samples_table = samples_table)
+  assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
+
+  assign_seats_rep |>
+    dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "CI", party)) |>
+    dplyr::group_by(party) |>
+    dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
+                                                  inf = ~ quantile(., 0.02),
+                                                  sup = ~ quantile(., 0.98))))
+
 }
