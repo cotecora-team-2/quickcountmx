@@ -8,8 +8,11 @@ hb_estimation_parallel(
   data_tbl,
   sampling_frame,
   split_var = NULL,
+  nominal_list_var = NULL,
   num_cores = 5,
   inv_metric_list = NULL,
+  nominal_max = 1000,
+  sig_figs = 7,
   ...
 )
 }
@@ -21,9 +24,16 @@ hb_estimation_parallel(
 
 \item{split_var}{unquoted name of variable that splits sampling frame and data}
 
+\item{nominal_list_var}{Unquoted name of variable with nominal list of voters}
+
 \item{num_cores}{Number of cores to use for parallel computation}
 
 \item{inv_metric_list}{List of inv_metric diagonals guesses for each split}
+
+\item{nominal_max}{Maximum number of nominal count for stations. Used for
+stations without fixed nominal list.}
+
+\item{sig_figs}{Number of significant figures for Stan output}
 
 \item{...}{Other parameters passed to hb_estimation.}
 }

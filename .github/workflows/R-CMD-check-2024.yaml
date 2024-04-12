@@ -7,14 +7,14 @@
 on:
   push:
     branches:
-      - main-2023
-      - dev-2023
+      - main-2024
+      - dev-2024
   pull_request:
     branches:
-      - main-2023
-      - dev-2023
+      - main-2024
+      - dev-2024
 
-name: R-CMD-check-2023
+name: R-CMD-check-2024
 
 jobs:
   R-CMD-check:

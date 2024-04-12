@@ -19,10 +19,12 @@ hb_estimation(
   adapt_delta = 0.8,
   max_treedepth = 10,
   chains = 3,
+  sig_figs = 6,
   model = "mlogit-corr",
-  nominal_max = 1200,
+  nominal_max = 1000,
   threads_per_chain = 1,
-  inv_metric = NULL
+  inv_metric = NULL,
+  erase_output_files = TRUE
 )
 }
 \arguments{
@@ -60,6 +62,8 @@ generator (optional).}
 
 \item{chains}{Number of chains (will be run in parallel)}
 
+\item{sig_figs}{Number of significant figures for Stan output}
+
 \item{model}{One of "mlogit" (the default) or "logit"}
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
@@ -68,6 +72,8 @@ stations without fixed nominal list.}
 \item{threads_per_chain}{Number of threads per chain to split calculation of log-posterior}
 
 \item{inv_metric}{vector of inverse metric diagonal for the model. Default is NULL}
+
+\item{erase_output_files}{If TRUE, output files are erased after fitting}
 }
 \value{
 A list with model fit (if return_fit=TRUE), a \code{tibble}

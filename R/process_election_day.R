@@ -79,7 +79,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @export
 process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
                           team = "default", even="0", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1200, seed=221285,
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1000, seed=221285,
                           inv_metric_file = NULL){
   logger::log_appender(logger::appender_file(log_file))
   logger::log_layout(logger::layout_glue_colors)
@@ -91,7 +91,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   table_frame <- readr::read_rds("data-raw/marco_2022.rds")
   table_frame <- table_frame |>
     ungroup() |>
-    mutate(ln = ifelse(LISTA_NOMINAL==0, as.numeric(nominal_max), LISTA_NOMINAL)) |>
+    mutate(ln = LISTA_NOMINAL) |>
     filter(ID_ESTADO == as.numeric(estado_str)) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
