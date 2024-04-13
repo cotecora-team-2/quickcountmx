@@ -153,17 +153,25 @@ generated quantities {
   real sum_votes;
 
   {
+  real sum_votes_part;
+  vector[p] y_out_part;
   vector[p] theta_f;
   vector[p] alpha_bn_f;
+  vector[p] alpha_bn_f_part;
   vector[p] pred_f;
   real pred_f_part_prop;
   array[N_f] real theta_f_total_prop;
+  array[N_f] real theta_f_total_prop_bias;
   vector[p] w_bias;
+  real w_bias_prop;
+
+  w_bias_prop = normal_rng(0, (1 - p_obs) / f_bias);
 
   for(i in 1:N_f){
       if(in_sample[i] == 0){
         pred_f_part_prop = dot_product(beta_part_prop[stratum_f[i],], x1_f[i,]);
         theta_f_total_prop[i] = inv_logit(pred_f_part_prop);
+        theta_f_total_prop_bias[i] = inv_logit(pred_f_part_prop + w_bias_prop);
       }
     }
 
@@ -171,33 +179,46 @@ generated quantities {
 
   for(k in 1:p){
     y_out[k] = 0.0;
+    y_out_part[k] = 0.0;
     w_bias[k] = normal_rng(0, (1 - p_obs) / f_bias);
   }
   for(i in 1:N_f){
     vector[p] temp_y_out = rep_vector(0, p);
+    vector[p] temp_y_out_part = rep_vector(0, p);
+
     if(in_sample[i] == 1){
       temp_y_out = to_vector(y_f[i, ]);
+      temp_y_out_part = to_vector(y_f[i, ]);
     } else {
       for(k in 1:p){
         pred_f[k] = dot_product(beta[k][stratum_f[i],], x1_f[i,]);
       }
       theta_f = softmax(to_vector(pred_f + w_bias));
       alpha_bn_f =  n_f[i] * theta_f_total_prop[i] * theta_f;
+      alpha_bn_f_part = n_f[i] * theta_f_total_prop_bias[i] * softmax(to_vector(pred_f));
       for(k in 1:p){
          temp_y_out[k] = neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
+         temp_y_out_part[k] = neg_binomial_2_rng(alpha_bn_f_part[k], alpha_bn_f_part[k] / kappa[stratum_f[i], k]);
       }
     }
   real sum_temp_y_out = sum(temp_y_out);
+  real sum_temp_y_out_part = sum(temp_y_out_part);
+
+  if (sum_temp_y_out_part > n_f[i]) {
+      temp_y_out_part = temp_y_out_part * (n_f[i] / sum_temp_y_out_part);
+    }
+    y_out_part = y_out_part + temp_y_out_part;
   if (sum_temp_y_out > n_f[i]) {
       temp_y_out = temp_y_out * (n_f[i] / sum_temp_y_out);
     }
     y_out = y_out + temp_y_out;
   }
   sum_votes = sum(y_out);
+  sum_votes_part = sum(y_out_part);
   for(k in 1:p){
     prop_votos[k] = y_out[k] / sum_votes;
   }
-  participacion = sum_votes / total_nominal;
+  participacion = sum_votes_part / total_nominal;
   }
 }
 
