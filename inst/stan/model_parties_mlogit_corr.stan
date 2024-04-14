@@ -151,7 +151,9 @@ generated quantities {
   array[p] real prop_votos;
   real participacion;
   real sum_votes;
+  real total_out;
 
+  total_out = 0.0;
   {
   vector[p] theta_f;
   vector[p] alpha_bn_f;
@@ -159,6 +161,8 @@ generated quantities {
   real pred_f_part_prop;
   array[N_f] real theta_f_total_prop;
   vector[p] w_bias;
+
+
 
   for(i in 1:N_f){
       if(in_sample[i] == 0){
@@ -177,6 +181,7 @@ generated quantities {
     vector[p] temp_y_out = rep_vector(0, p);
     if(in_sample[i] == 1){
       temp_y_out = to_vector(y_f[i, ]);
+      total_out += sum(temp_y_out);
     } else {
       for(k in 1:p){
         pred_f[k] = dot_product(beta[k][stratum_f[i],], x1_f[i,]);
@@ -186,6 +191,7 @@ generated quantities {
       for(k in 1:p){
          temp_y_out[k] = neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
       }
+      total_out = total_out + n_f[i] * theta_f_total_prop[i];
     }
   real sum_temp_y_out = sum(temp_y_out);
   if (sum_temp_y_out > n_f[i]) {
@@ -197,7 +203,7 @@ generated quantities {
   for(k in 1:p){
     prop_votos[k] = y_out[k] / sum_votes;
   }
-  participacion = sum_votes / total_nominal;
+  participacion = total_out / total_nominal;
   }
 }
 
