@@ -88,14 +88,14 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_rds("data-raw/marco_2022.rds")
+  table_frame <- readr::read_rds("data-raw/marco_2024.rds")
   table_frame <- table_frame |>
     ungroup() |>
     mutate(ln = LISTA_NOMINAL) |>
     filter(ID_ESTADO == as.numeric(estado_str)) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2022.csv") |>
+  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv") |>
     filter(ID_ESTADO == as.numeric(estado_str)) #%>%
 #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
@@ -163,7 +163,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
 
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
     filter(ID_ESTADO == as.numeric(estado_str))
-  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
+  # prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
+  prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .9, n_muestra_m/n_t_muestra$n - 0.05, n_muestra_m/n_t_muestra$n)
   if(!is.null(inv_metric)){
     inv_metric <- readr::read_rds(inv_metric_file)
     logger::log_info("Metrica inicial leida")
@@ -173,7 +174,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                           sampling_frame = table_frame,
                           parties = all_of(lista_candidatos), prop_obs = prop_obs,
-                          model = "mlogit-corr",
+                          model = "mlogit",
                           covariates = all_of(c("seccion_no_urbana")), num_iter = as.numeric(n_iter),
                           nominal_max = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed),
