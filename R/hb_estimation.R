@@ -226,6 +226,7 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
               sup = quantile(prop_votes, probs = 0.98))
   output <- list()
   region_names <- res_list |> purrr::map( ~.x$region_name)
+  estimates_tbl$party <- c("part", head(res_list[[1]]$parties_names, -1))
   output$estimates <- estimates_tbl
   inv_metric_list <- res_list |> purrr::map(~.x$fit) |> purrr::map( ~.x$inv_metric)
   names(inv_metric_list) <- region_names
