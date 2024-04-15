@@ -177,6 +177,7 @@ generated quantities {
     y_out[k] = 0.0;
     w_bias[k] = normal_rng(0, (1 - p_obs) / f_bias);
   }
+  w_bias[p] = 0;
   for(i in 1:N_f){
     vector[p] temp_y_out = rep_vector(0, p);
     if(in_sample[i] == 1){
