@@ -72,7 +72,6 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @param n_chains number of stan chains
 #' @param nominal_max maximum number of votes in special stations
 #' @param seed random seed
-#' @param inv_metric_file path to file with initial metric
 #' @param use_inv_metric use initial metric from previous run
 #' @inheritParams hb_estimation
 #'

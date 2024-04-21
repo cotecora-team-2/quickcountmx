@@ -62,8 +62,6 @@ saved.}
 
 \item{B}{Number of bootstrap replicates used to compute standard errors,
 defaults to 50.}
-
-\item{inv_metric_file}{path to file with initial metric}
 }
 \description{
 Automatically process batch of new data, and write estimates in correct
