@@ -73,14 +73,15 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 #' @param nominal_max maximum number of votes in special stations
 #' @param seed random seed
 #' @param inv_metric_file path to file with initial metric
+#' @param use_inv_metric use initial metric from previous run
 #' @inheritParams hb_estimation
 #'
 #' @rdname process_batch_election_day
 #' @export
 process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox,
                           team = "default", even="0", n_iter = 300, n_chains = 4,
-                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10, nominal_max = 1000, seed=221285,
-                          inv_metric_file = NULL){
+                          n_warmup = 200, adapt_delta = 0.80, max_treedepth = 10,
+                          nominal_max = 1000, seed=221285, use_inv_metric = TRUE){
   logger::log_appender(logger::appender_file(log_file))
   logger::log_layout(logger::layout_glue_colors)
   logger::log_threshold(logger::TRACE)
@@ -164,10 +165,15 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
     filter(ID_ESTADO == as.numeric(estado_str))
   prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
-  if(!is.null(inv_metric)){
-    inv_metric <- readr::read_rds(inv_metric_file)
+
+  inv_metric_path <- paste0("data-raw/inv_metric_",estado_str,".rds")
+  if(file.exists(inv_metric_path) & use_inv_metric){
+    inv_metric <- readr::read_rds(inv_metric_path)
     logger::log_info("Metrica inicial leida")
+  } else {
+    inv_metric <- NULL
   }
+
   # run model ###################
   fit_time <- system.time(
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
@@ -192,7 +198,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     logger::log_fatal("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::FATAL)}")
   }
   # sobreescribir métrica
-  readr::write_rds(fit$inv_metric, inv_metric_file)
+  readr::write_rds(fit$inv_metric, inv_metric_path)
 
   write_results(fit = fit, file_name = file_name,
                 team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
