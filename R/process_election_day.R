@@ -99,13 +99,9 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
 
   candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv")
 
-  if(estado_str != "00"){
-    candidatos <- candidatos  |>
-      filter(ID_ESTADO == as.numeric(estado_str))
-  } else {
-    candidatos <- candidatos  |>
-      filter(ID_ESTADO == "00")
-  }
+
+  candidatos <- candidatos  |>
+    filter(ID_ESTADO == as.numeric(estado_str))
 
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
@@ -170,12 +166,11 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   #  tot_casillas <- table_frame %>% nrow()
   #  n_casillas <- data_in %>% nrow()
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv")
-  if(estado_str != "00"){
-    n_t_muestra <- n_t_muestra %>%
-      filter(ID_ESTADO == as.numeric(estado_str))
-  }
+  n_t_muestra <- n_t_muestra %>%
+    filter(ID_ESTADO == as.numeric(estado_str))
 
-  prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .9, n_muestra_m/n_t_muestra$n - 0.05, n_muestra_m/n_t_muestra$n)
+
+  prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .95, 0.95, n_muestra_m/n_t_muestra$n)
 
   inv_metric_path <- paste0("data-raw/inv_metric_",estado_str,".rds")
   if(file.exists(inv_metric_path) & use_inv_metric){
