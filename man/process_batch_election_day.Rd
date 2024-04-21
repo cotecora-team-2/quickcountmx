@@ -22,7 +22,7 @@ process_batch(
   max_treedepth = 10,
   nominal_max = 1000,
   seed = 221285,
-  inv_metric_file = NULL
+  use_inv_metric = TRUE
 )
 
 ratio_process_batch(path_name, file_name, path_out, B, team = "default")
@@ -58,7 +58,7 @@ saved.}
 
 \item{seed}{random seed}
 
-\item{inv_metric_file}{path to file with initial metric}
+\item{use_inv_metric}{use initial metric from previous run}
 
 \item{B}{Number of bootstrap replicates used to compute standard errors,
 defaults to 50.}
