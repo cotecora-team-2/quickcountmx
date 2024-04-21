@@ -24,15 +24,15 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
 
   prop_obs_str <- format(prop_obs,digits=3)
   #tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(as.numeric(prop_obs_str)*100))
-#  tab_compulsados <- tab_candidatos %>%
-#    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
-#           EST_REC = ifelse(LMU == 0,n_estratos,""),
-#           TOT_CAS = ifelse(LMU == 0,tot_casillas,""),
-#           CAS_REC = ifelse(LMU == 0,n_casillas,""),
-#           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
+  #  tab_compulsados <- tab_candidatos %>%
+  #    mutate(ESTRATOS = ifelse(LMU == 0,tot_estratos,""),
+  #           EST_REC = ifelse(LMU == 0,n_estratos,""),
+  #           TOT_CAS = ifelse(LMU == 0,tot_casillas,""),
+  #           CAS_REC = ifelse(LMU == 0,n_casillas,""),
+  #           PORCENTAJE = ifelse(LMU == 0,round(n_casillas/tot_casillas, digits = 2),""))
 
   readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
-                                               EN, R, ".csv"))
+                                          EN, R, ".csv"))
   readr::write_csv(tab_candidatos, paste0(path_mailbox, "/", team,
                                           EN, R, ".csv"))
   p <- stringr::str_split(path_mailbox, "/", simplify = TRUE)
@@ -53,7 +53,7 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
   logger::log_trace("{logger::grayscale_by_log_level(row4,logger::ERROR)}")
 
   #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
-#                                                 EN, R, ".csv"))
+  #                                                 EN, R, ".csv"))
 }
 #' Automatically process batch of new data, and write estimates in correct
 #' form for INE systems
@@ -92,17 +92,22 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   table_frame <- table_frame |>
     ungroup() |>
     mutate(ln = LISTA_NOMINAL) |>
-    filter(ID_ESTADO == as.numeric(estado_str)) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
+  if(estado_str != "00"){
+    table_frame <- table_frame |>  filter(ID_ESTADO == as.numeric(estado_str))
+  }
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv") |>
-    filter(ID_ESTADO == as.numeric(estado_str)) #%>%
-#    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
+  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv")
+
+
+  candidatos <- candidatos  |>
+    filter(ID_ESTADO == as.numeric(estado_str))
+
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1) %>%
-#    rename(ID_ESTADO = iD_ESTADO) %>% #cambia nombre de columna iD_ESTADO a mayusculas
+    #    rename(ID_ESTADO = iD_ESTADO) %>% #cambia nombre de columna iD_ESTADO a mayusculas
     mutate(OTROS = CNR + NULOS) %>%
     mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
                                   stringr::str_pad(SECCION, 4, pad = "0"),
@@ -117,9 +122,9 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   lista_coaliciones <- candidatos$PARTIDO %>% unique()
   votacion_larga <- data_in %>%
     tidyr::pivot_longer(cols = all_of(lista_coaliciones), names_to = "PARTIDO",
-                 values_to = "votos")
+                        values_to = "votos")
   votacion <- votacion_larga %>%
-    left_join(candidatos) %>%
+    left_join(candidatos %>% select(-ID_ESTADO)) %>%
     group_by(CLAVE_CASILLA, ID_ESTADO, CANDIDATO) %>%
     summarise(votos = sum(votos)) %>%
     tidyr::pivot_wider(names_from = CANDIDATO, values_from = votos)
@@ -135,13 +140,13 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tmp_votacion <- tmp_votacion[order(votacion$CLAVE_CASILLA),]
   print(all(tmp_data_in == tmp_votacion))
   if(!all(tmp_data_in == tmp_votacion)){
-      erroneos <- data.frame(cand_id = which(tmp_data_in != tmp_votacion, arr.ind=TRUE)[,2] %>% as.numeric())
-      erroneos <- erroneos %>% group_by(cand_id) %>% summarise(c = n())
-      erroneos <- erroneos %>%
-                  mutate_at(vars(cand_id), ~ names(tmp_data_in)[.x])
-      print(erroneos)
-      for(ro in 1:nrow(erroneos)) {print(paste0("candidato erroneo: ",erroneos[ro,1]))}
-      for(ro in 1:nrow(erroneos)) {logger::log_error('La suma del candidato {logger::colorize_by_log_level(erroneos[ro,1], logger::ERROR)} esta incorrecta en {logger::colorize_by_log_level(erroneos[ro,2], logger::ERROR)} casillas!')}
+    erroneos <- data.frame(cand_id = which(tmp_data_in != tmp_votacion, arr.ind=TRUE)[,2] %>% as.numeric())
+    erroneos <- erroneos %>% group_by(cand_id) %>% summarise(c = n())
+    erroneos <- erroneos %>%
+      mutate_at(vars(cand_id), ~ names(tmp_data_in)[.x])
+    print(erroneos)
+    for(ro in 1:nrow(erroneos)) {print(paste0("candidato erroneo: ",erroneos[ro,1]))}
+    for(ro in 1:nrow(erroneos)) {logger::log_error('La suma del candidato {logger::colorize_by_log_level(erroneos[ro,1], logger::ERROR)} esta incorrecta en {logger::colorize_by_log_level(erroneos[ro,2], logger::ERROR)} casillas!')}
   }
   rm(votacion)
   rm(tmp_votacion)
@@ -150,20 +155,22 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   # do processing ########
   muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
     mutate(estrato = as.character(estrato))
-  data_stratum_tbl <- table_frame %>%
-    filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
-    mutate(estrato = as.character(estrato))
+  #data_stratum_tbl <- table_frame %>%
+  #  filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
+  #  mutate(estrato = as.character(estrato))
   n_muestra_m <- muestra_m %>% nrow()
   logger::log_info(paste0("numero de casillas despues de union con marco: ", n_muestra_m))
 
-#  tot_estratos <- nrow(data_stratum_tbl)
-#  n_estratos <- muestra_m %>% select(estrato) %>% unique() %>% nrow()
-#  tot_casillas <- table_frame %>% nrow()
-#  n_casillas <- data_in %>% nrow()
-
-  n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv") %>%
+  #  tot_estratos <- nrow(data_stratum_tbl)
+  #  n_estratos <- muestra_m %>% select(estrato) %>% unique() %>% nrow()
+  #  tot_casillas <- table_frame %>% nrow()
+  #  n_casillas <- data_in %>% nrow()
+  n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv")
+  n_t_muestra <- n_t_muestra %>%
     filter(ID_ESTADO == as.numeric(estado_str))
-  prop_obs <- ifelse(n_muestra_m/n_t_muestra$n >= 1.0, 0.999, n_muestra_m/n_t_muestra$n)
+
+
+  prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .95, 0.95, n_muestra_m/n_t_muestra$n)
 
   inv_metric_path <- paste0("data-raw/inv_metric_",estado_str,".rds")
   if(file.exists(inv_metric_path) & use_inv_metric){
@@ -176,11 +183,11 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   # run model ###################
   fit_time <- system.time(
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
-                          sampling_frame = table_frame,
-                          parties = all_of(lista_candidatos), prop_obs = prop_obs,
-                          model = "mlogit-corr",
-                          covariates = all_of(c("seccion_no_urbana")), num_iter = as.numeric(n_iter),
-                          nominal_max = as.numeric(nominal_max),
+                         sampling_frame = table_frame,
+                         parties = all_of(lista_candidatos), prop_obs = prop_obs,
+                         model = "mlogit",
+                         covariates = all_of(c("seccion_urbana")), num_iter = as.numeric(n_iter),
+                         nominal_max = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed),
                          threads_per_chain = 1, inv_metric = inv_metric)
   )
@@ -188,7 +195,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   if(even == "0") m <- 1
   else m <- 2
   if(fit_time[3] < 230 * m){
-      logger::log_info("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::SUCCESS)}")
+    logger::log_info("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::SUCCESS)}")
   }
   else if(fit_time[3] < 290*m){
     logger::log_warn("elapsed time: {logger::colorize_by_log_level(fit_time[3],logger::WARN)}")
