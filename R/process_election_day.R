@@ -186,7 +186,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                          sampling_frame = table_frame,
                          parties = all_of(lista_candidatos), prop_obs = prop_obs,
                          model = "mlogit",
-                         covariates = all_of(c("seccion_no_urbana")), num_iter = as.numeric(n_iter),
+                         covariates = all_of(c("seccion_urbana")), num_iter = as.numeric(n_iter),
                          nominal_max = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed),
                          threads_per_chain = 1, inv_metric = inv_metric)
