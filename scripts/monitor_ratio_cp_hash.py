@@ -94,7 +94,7 @@ def main(params):
                   else:
                       last_hash = get_hash(last_full_path)
                       invalid = False
-                  fn_out = 'razon' + descriptores['id_estado'] + descriptores['fecha'] + '.csv'
+                  fn_out = params.team + descriptores['id_estado'] + descriptores['fecha'] + '.csv'
                   with open(params.last_file, "a") as myfile:
                       myfile.write('{},{},{}\n'.format(nrow,filename,fn_out))
                   keep_trying = False
