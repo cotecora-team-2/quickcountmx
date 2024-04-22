@@ -142,7 +142,10 @@ n_strata_tbl <- sample_diputados |>
 Bootstrap replicates:
 
 ```{r}
-replicates <- bootstrap_diputados(sample_diputados, stratum = distrito_f,
+
+sample_diputados_miss <- sample_diputados |> 
+  filter(!(ID_ESTADO == 1 & ID_DISTRITO_FEDERAL == 1))
+replicates <- bootstrap_diputados(sample_diputados_miss, stratum = distrito_f,
                                   stratum_tbl = n_strata_tbl, n_stratum = n_strat,
                                   coalitions_tbl = coalitions_tbl, 
                                   B = 20, seed = 12,
@@ -177,13 +180,12 @@ assign_seats_rep |>
 All steps in a single function:
 
 ```{r}
-estimates <- bootstrap_estimation_diputados(sample_diputados, stratum = distrito_f,
-                                            stratum_tbl = n_strata_tbl, n_stratum = n_strat,
-                                            coalitions_tbl = coalitions_tbl, 
-                                            assignment_tbl = assignment_tbl,
-                                            B = 20, seed = 12,
-                                            samples_table = TRUE)
-
+estimates <- ratio_estimation_diputados(sample_diputados, stratum = distrito_f,
+                                        stratum_tbl = n_strata_tbl, 
+                                        n_stratum = n_strat,
+                                        coalitions_tbl = coalitions_tbl, 
+                                        assignment_tbl = assignment_tbl,
+                                        B = 20, seed = 12)
 estimates |> 
   mutate(across(where(is.double), ~round(., 3)))
 ```
