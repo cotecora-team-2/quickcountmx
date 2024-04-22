@@ -8,7 +8,7 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
     mutate(inf = prop - stats::qt(0.025, n_muestra - 1) * std_error) %>%
     mutate(sup = prop + stats::qt(0.025, n_muestra - 1) * std_error) %>%
     select(-std_error) %>%
-    dplyr::mutate(across(where(is.numeric), round, 1)) %>%
+    dplyr::mutate(across(where(is.numeric), round, 2)) %>%
     tibble::column_to_rownames(var="party") %>%
     tibble::rownames_to_column() %>%
     tidyr::gather(LMU, value, -rowname) %>%
@@ -34,7 +34,7 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
 
 
 
-  readr::write_csv(tab_candidatos, paste0(path_out, "/", 'razon',
+  readr::write_csv(tab_candidatos, paste0(path_out, "/", team,
                                                EN, R, ".csv"))
 #  readr::write_csv(tab_compulsados, file = paste0(path_results, "/", "compulsado",
 #                                                 EN, R, ".csv"))
@@ -84,7 +84,9 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
   # do processing ########
-  muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
+  muestra_m <- left_join(data_in,
+      table_frame |> select(CLAVE_CASILLA, estrato),
+      by=c("CLAVE_CASILLA")) |>
     mutate(estrato = as.character(estrato))
   data_stratum_tbl <- table_frame %>%
     filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
