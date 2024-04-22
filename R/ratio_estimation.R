@@ -220,7 +220,8 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   data_parties_tbl <- data_parties_long_tbl |>
     tidyr::pivot_wider(names_from = party, values_from = n_votes, values_fill = 0)
 
-  ratio <- ratio_estimation(data_parties_tbl, strata, stratum_tbl,n_stratum = n_strata,
+  ratio <- ratio_estimation(data_parties_tbl, strata, stratum_tbl,
+                            n_stratum = n_strata,
                             parties = tidyr::all_of(parties_chr), B=0, std_errors = FALSE) |>
     mutate(prop = prop / 100)
 
@@ -265,7 +266,8 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 #' `n_seats_maj` integer, number of seats assigned by majority for each of the parties out of the first 300;
 #'
 #' @export
-assign_majority <- function(estimates_strata_tbl, assignment_tbl, party_name, candidate_name){
+assign_majority <- function(estimates_strata_tbl, assignment_tbl,
+                            party_name, candidate_name){
   assignment_tbl <- assignment_tbl |>
     rename(party = {{ party_name }}) |>
     rename(candidate = {{ candidate_name }})
@@ -392,13 +394,14 @@ assign_prop <- function(total_tbl) {
 #' and the candidate assigned to each. Party columns must be named party, the candidate party
 #' must be named party.
 #' @export
-bootstrap_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
-                                           coalitions_tbl, assignment_tbl, B = 50, seed = NA,
-                                           samples_table = FALSE) {
+ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
+                                           coalitions_tbl, assignment_tbl, B = 50,
+                                       seed = NA) {
+  data_tbl
   estimates <- bootstrap_diputados(data_tbl = data_tbl, stratum = {{stratum}},
                                    stratum_tbl = stratum_tbl, n_stratum = {{n_stratum}},
                                    coalitions_tbl = coalitions_tbl,
-                                   B = B, seed = seed, samples_table = samples_table)
+                                   B = B, seed = seed, samples_table = TRUE)
 
   assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
   part_tbl <- estimates$total_tbl |>

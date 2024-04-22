@@ -169,7 +169,6 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_t_muestra <- n_t_muestra %>%
     filter(ID_ESTADO == as.numeric(estado_str))
 
-
   prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .95, 0.95, n_muestra_m/n_t_muestra$n)
 
   inv_metric_path <- paste0("data-raw/inv_metric_",estado_str,".rds")

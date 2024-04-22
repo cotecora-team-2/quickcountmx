@@ -4,5 +4,5 @@
   "kappa_param": [1, 0.1],
   "sigma_coefs": [0.25],
   "f_bias": [10.0],
-  "nominal_max": 1200
+  "nominal_max": 1000
 }
