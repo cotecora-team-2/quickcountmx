@@ -311,7 +311,8 @@ assign_all_seats <- function(reps_list, assignment_tbl) {
   while(sum(to_assign$miss_assign) > 0) {
     total_seats_tbl <- total_seats_tbl |>
       dplyr::mutate(n_assign = 500 - sum(n_seats_maj) - sum(topped * n_seats_prop)) |>
-      dplyr::select(party, rep, prop_vot_nal, n_seats_maj, n_seats_max, topped, n_assign)
+      dplyr::select(party, rep, prop, prop_vot_nal, n_seats_maj, n_seats_max,
+                    topped, n_assign)
 
     total_seats_tbl <- assign_prop(total_seats_tbl)
     to_assign <- total_seats_tbl |>
