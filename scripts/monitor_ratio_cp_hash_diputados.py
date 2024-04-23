@@ -94,7 +94,7 @@ def main(params):
                   else:
                       last_hash = get_hash(last_full_path)
                       invalid = False
-                  fn_out = 'razon' + descriptores['id_estado'] + descriptores['fecha'] + '.csv'
+                  fn_out = params.team + descriptores['id_estado'] + descriptores['fecha'] + '.csv'
                   with open(params.last_file, "a") as myfile:
                       myfile.write('{},{},{}\n'.format(nrow,filename,fn_out))
                   keep_trying = False
@@ -107,13 +107,14 @@ def main(params):
                       print("Remesa {} no valida!".format(full_path))
                       raise ValueError("Remesa {} no valida!".format(full_path))
                   if  get_hash(full_path) != last_hash:
-                      subprocess.call(["r", "-e", "quickcountmx:::ratio_diputados_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"',B='"+str(params.b)+"','"+params.team+"')"]) 
+                      subprocess.call(["r", "-e", "quickcountmx:::ratio_diputados_process_batch('" +full_path+"','"+descriptores['nombre']+"','"+params.path_out+"','"+params.path_mailbox+"',B='"+str(params.b)+"','"+params.team+"')"]) 
                   else:
                       keep_trying = True
                       while keep_trying:
                           try:
                               last_full_out = os.path.join(params.path_out, last_fn_out)
                               full_out = os.path.join(params.path_out, fn_out)
+                              full_mailbox = os.path.join(params.path_mailbox, fn_out)
                               with open(last_full_out, 'r') as infile:
                                   last_results_list = infile.readlines()
                               with open(full_out, "w") as myfile:
@@ -124,6 +125,7 @@ def main(params):
                                       else:
                                           new_line[2] = descriptores['fecha']
                                           myfile.write(','.join(new_line))
+                              copy(full_out,full_mailbox)
                               keep_trying = False
                           except Exception as e:
                               time.sleep(int(params.wait_sec))
@@ -146,6 +148,8 @@ if __name__ == "__main__":
                         help="Data path of input")
     parser.add_argument("--path_out", "-po", type=str,
                         help="Data path of output")
+    parser.add_argument("--path_mailbox", "-pm", type=str,
+                        help="Data path of mailbox")
     parser.add_argument('--b', "-b", type=int, default=100,
                         help="Number of bootstrap replicates used to compute standard errors")
     parser.add_argument('--wait_sec', "-s", type=int,

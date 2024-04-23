@@ -1,4 +1,4 @@
-write_results_ratio_diputados <- function(df, file_name, team, path_out){
+write_results_ratio_diputados <- function(df, file_name, team, path_out, path_mailbox){
   EN <- "40"
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -28,6 +28,8 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out){
 
   readr::write_csv(tab_seats_candidatos, paste0(path_out, "/", team, 'dip',
                                                EN, R, ".csv"))
+  readr::write_csv(tab_seats_candidatos, paste0(path_mailbox, "/", team, 'dip',
+                                                EN, R, ".csv"))
 
   tab_prop_candidatos <- df |>
     dplyr::arrange(desc(prop_median)) |>
@@ -55,6 +57,8 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out){
 
   readr::write_csv(tab_prop_candidatos, paste0(path_out, "/", team,
                                                 EN, R, ".csv"))
+  readr::write_csv(tab_prop_candidatos, paste0(path_mailbox, "/", team,
+                                               EN, R, ".csv"))
 
 }
 
@@ -66,13 +70,15 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out){
 #' @param file_name Name of the file with the data.
 #' @param path_out Path to directory where partial results will be
 #' saved.
+#' @param path_mailbox Additional path to directory where partial results will be
+#' saved.
 #' @param team Name of team running the model, to be used in INE reports.
 #' @inheritParams ratio_estimation
 
 #'
 #' @rdname process_batch_election_day
 #' @export
-ratio_diputados_process_batch <- function(path_name, file_name, path_out, B,
+ratio_diputados_process_batch <- function(path_name, file_name, path_out, path_mailbox, B,
                           team = "default"){
   print(team)
   tipo <- stringr::str_sub(file_name, 8, 9)
@@ -102,8 +108,8 @@ ratio_diputados_process_batch <- function(path_name, file_name, path_out, B,
                                          B = as.numeric(B))
   )
   print(fit_time)
-  print(ratios)
+  print(estimates)
 
   write_results_ratio_diputados(df = estimates, file_name = file_name,
-                team = team, path_out = path_out)
+                team = team, path_out = path_out, path_mailbox = path_mailbox)
 }

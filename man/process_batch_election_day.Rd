@@ -32,6 +32,7 @@ ratio_diputados_process_batch(
   path_name,
   file_name,
   path_out,
+  path_mailbox,
   B,
   team = "default"
 )
@@ -47,7 +48,8 @@ day it will be a file with a subset of the sample.}
 \item{path_out}{Path to directory where partial results will be
 saved.}
 
-\item{path_mailbox}{path to mailbox}
+\item{path_mailbox}{Additional path to directory where partial results will be
+saved.}
 
 \item{team}{Name of team running the model, to be used in INE reports.}
 
