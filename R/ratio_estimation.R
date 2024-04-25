@@ -414,7 +414,7 @@ ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum
     ungroup()
 
   assign_seats_rep |>
-    dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "CI", party)) |>
+    dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "IND", party)) |>
     dplyr::group_by(party) |>
     dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
                                                   inf = ~ quantile(., 0.02),
