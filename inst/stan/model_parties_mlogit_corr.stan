@@ -77,10 +77,10 @@ parameters {
 }
 
 transformed parameters {
-   array[p] vector<lower=0>[N] alpha_bn;
+   array[p] vector[N] alpha_bn;
    array[p] matrix[n_strata_f, n_covariates_f + 1] beta;
    matrix[n_strata_f, n_covariates_f + 1] beta_part_prop;
-   matrix<lower=0>[n_strata_f, p] kappa;
+   matrix[n_strata_f, p] kappa;
 
   {
    matrix[N,p] pred;
