@@ -5,7 +5,7 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
   tab_seats_candidatos <- df |>
     dplyr::arrange(desc(n_seats_total_median)) |>
     dplyr::select(party, contains("n_seats")) |>
-    filter(party != "NULOS", party != "part") |>
+    filter(party != "NULOS", party != "part", party != "CNR") |>
     mutate(inf = floor(n_seats_total_inf)) |>
     mutate(sup = ceiling(n_seats_total_sup)) |>
     mutate(median = round(n_seats_total_median)) |>
@@ -34,7 +34,8 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
   tab_prop_candidatos <- df |>
     dplyr::arrange(desc(prop_median)) |>
     dplyr::select(party, contains("prop")) |>
-    filter(party != "NULOS", party != "part") |>
+    mutate(party = ifelse(party == "part", "PART", party)) %>%
+    filter(party != "NULOS", party != "CNR") |>
     mutate(inf = round(100 * prop_inf, 2)) |>
     mutate(sup = round(100 * prop_sup, 2)) |>
     mutate(prop = round(100 * prop_median, 2)) |>
@@ -53,7 +54,7 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
     EN = EN,
     R = R ) |>
     relocate(c(EQ,EN,R), .before = everything()) |>
-    relocate(c(LMU), .after = last_col())
+    relocate(c(PART, LMU), .after = last_col())
 
   readr::write_csv(tab_prop_candidatos, paste0(path_out, "/", team,
                                                 EN, R, ".csv"))
