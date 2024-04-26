@@ -4,9 +4,12 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
   R <- stringr::str_sub(file_name, 12, 17)
 
   tab_candidatos <- df %>%
-    dplyr::arrange(desc(prop)) %>% dplyr::select(party,prop,std_error) %>% filter(party != "OTROS") %>%
-    mutate(inf = prop - stats::qt(0.025, n_muestra - 1) * std_error) %>%
-    mutate(sup = prop + stats::qt(0.025, n_muestra - 1) * std_error) %>%
+    dplyr::mutate(party = ifelse(party == "part", "PART", party)) %>%
+    dplyr::arrange(desc(prop)) %>%
+    dplyr::select(party,prop,std_error) %>%
+    filter(party != "OTROS") %>%
+    mutate(inf = prop + stats::qt(0.025, n_muestra - 1) * std_error) %>%
+    mutate(sup = prop - stats::qt(0.025, n_muestra - 1) * std_error) %>%
     select(-std_error) %>%
     dplyr::mutate(across(where(is.numeric), round, 2)) %>%
     tibble::column_to_rownames(var="party") %>%
