@@ -1,5 +1,5 @@
 ---
-title: "Graficas de dia de la elección"
+title: "Monitoreo Remesas el dia de la elección"
 output: html_document
 ---
 
@@ -7,133 +7,80 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r,echo=FALSE,message=FALSE}
-reescalar <- TRUE
-is_median_ylim <- FALSE
-```
-
 ```{r, echo=FALSE,message=FALSE}
 library(tidyverse)
-get_ylim <- function(df,is_median) {
-  if(is_median)
-    max((df %>% group_by(candidato) %>% summarise(m = median(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
-  else
-    max((df %>% group_by(candidato) %>% summarise(m = max(median,na.rm = TRUE)) %>% filter(!is.na(m)))$m)*1.05
-}
 
-path_buzon2 <- "/home/rstudio/workspace/cotecora_s14/buzon2/"
-estimaciones_files <- list.files(paste0(path_buzon2,"estimaciones"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-razon_files <- list.files(paste0(path_buzon2,"razon"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-pctpropobs_files <- list.files(paste0(path_buzon2,"pctpropobs"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
-multi_files <- estimaciones_files[grepl("ortizm|anzarut",estimaciones_files,fixed = FALSE)]
-mendoza_files <- estimaciones_files[grepl("mendoza",estimaciones_files,fixed = TRUE)]
-compulsado_files <- estimaciones_files[grepl("compulsado",estimaciones_files,fixed = TRUE)]
-```
+#path_cortes <- "/home/rstudio/workspace/cotecora_s14/buzon2/"
+path_cortes <- "../data-raw/cortes-sim1/"
+#remesas_ver <- list.files(paste0(path_cortes,"ver"), full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
+remesas_lst <- list.files(path_cortes, full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 
-```{r, echo=FALSE,message=FALSE}
+remesas_tbl <- tibble(path = remesas_lst) |>
+  dplyr::mutate(path2 = path) |>
+  tidyr::separate(path2, into = c("election","filename"), sep = "/") |>
+  dplyr::mutate(elec_edo = stringr::str_sub(filename,8,11)) |>
+  dplyr::mutate(ID_ESTADO = as.numeric(stringr::str_sub(filename,10,11))) |>
+  ## primero filtrar diputados porque es otra logica en terminos de pegar candidatos
+  dplyr::filter(election != "diputados") |>
+  arrange(elec_edo,filename)
 
-get_df <- function(edo_id){
-    out <- tryCatch(
-        {
-          get_fdate <- function(x){
-            x <- as.character(x)
-            nx <- as.POSIXct(paste0(substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M")
-           }
-          candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2021.csv") %>%
-            filter(ID_ESTADO == as.numeric(edo_id)) #%>%
-    #    filter(!grepl("IC",CANDIDATO)) #quita candidatos independientes
-          lista_candidatos <- candidatos$CANDIDATO %>% unique()
-          lista_candidatos <- lista_candidatos[!grepl("OTROS", lista_candidatos, fixed = TRUE)]
-          lista_candidatos <- append(lista_candidatos,"PART")
+candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2024.csv")
 
-          file_edos <- substr(multi_files, nchar(multi_files) - 11,nchar(multi_files) - 10)
-          multi_df <- multi_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.) %>%
-                                                              mutate_at(vars(EN), ~
-                                                                          as.character(.)) %>%
-                                                              mutate(method="multi"))
-          file_edos <- substr(mendoza_files, nchar(mendoza_files) - 11,nchar(mendoza_files) - 10)
-          mendoza_df <- mendoza_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
-                                                              mutate(method="mendoza"))
-          file_edos <- substr(razon_files, nchar(razon_files) - 11,nchar(razon_files) - 10)
-          razon_df <- razon_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)) %>%
-                                                              mutate(PART=as.numeric(""))  %>%
-                                                              mutate(method="razon")
-          file_edos <- substr(pctpropobs_files, nchar(pctpropobs_files) - 5,nchar(pctpropobs_files) - 4)
-          pctpropobs_df <- pctpropobs_files[file_edos == edo_id] %>% map_df(., ~ read_csv(., col_names = c("EN","R","pctpropobs"),col_types = "cdd")) 
-          file_edos <- substr(compulsado_files, nchar(compulsado_files) - 11,nchar(compulsado_files) - 10)
-          compulsado_df <- compulsado_files[file_edos == edo_id] %>% map_df(., ~ read_csv(.)  %>%
-                                                              mutate(method="compulsado") %>%
-                                                                select(-ESTRATOS,-EST_REC,-TOT_CAS,-CAS_REC,-PORCENTAJE))
-          df <- do.call("rbind", list(multi_df,mendoza_df,razon_df,compulsado_df))
-          df <- df %>%
-            ungroup() %>%
-            left_join(pctpropobs_df, by=c("EN","R")) %>%
-            tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "candidato",
-                 values_to = "porcentaje") %>%
-            rename(fecha = R) %>%
-            mutate_at(vars(fecha), get_fdate) %>%
-            select(-EQ) %>%
-            unique() %>%
-            group_by(EN,fecha,pctpropobs) %>%
-            mutate(LMU = dplyr::case_when(
-            LMU == 0 ~ "inf",
-            LMU == 1 ~ "median",
-            LMU == 2 ~ "sup")) %>%
-            tidyr::pivot_wider(names_from = LMU, values_from = porcentaje) 
-
-          df
-        },
-        error=function(cond) {
-            message(paste("No hay datos para",edo_id))
-            message(cond)
-            return(NA)
-        }
-    )    
-    return(out)
-}
-
-df6 <- get_df("06")
-df8 <- get_df("08")
-df16 <- get_df("16")
-df18 <- get_df("18")
-df32 <- get_df("32")
 
 ```
 
+```{r,echo=FALSE,message=FALSE}
 
-```{r, echo=TRUE,fig.width=10}
-plotDF_edo <- function(df,edo_str) {
-    out <- tryCatch(
-        {
-          limite <- ifelse(reescalar, get_ylim(df,is_median_ylim), 100)
-          ann_text<-data.frame(fecha=df$fecha,
-                               y=rep(limite ,nrow(df)),
-                               candidato=df$candidato,
-                               label=substr(as.character(signif(df$pctpropobs,digits=2)),1,3))
-          ann_text <- ann_text %>% mutate(label=ifelse(as.numeric(substr(as.character(fecha),15,16)) %% 15, "",label)) %>% mutate(label=ifelse(label=="NA","",label))
-          ggplot(df, aes(fecha,median, color=factor(candidato))) +
-            geom_line(aes(group = candidato)) +
-            geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.5) +
-            ylim(0,limite) +
-            facet_wrap(~method, nrow=1) +
-            xlab("Hora") +
-            ylab("Porcentaje") +
-            labs(subtitle = paste("Votacion para gobernador de",edo_str)) +
-            theme(legend.position="bottom") +
-            geom_text(data = ann_text,aes(x=fecha,y=y,label=label), size = 3, alpha = 0.1, inherit.aes = FALSE)
-        },
-        error=function(cond) {
-            message(paste("No hay datos para",edo_str))
-            message(cond)
-            return(NA)
-        }
-    )    
-    return(out)
+read_sum_remesa <- function(row){ # row <-1
+ # print(paste(row,Sys.time(), sep = " ="))
+  
+  file_path <- remesas_tbl$path[row]
+  
+  print(paste(file_path))
+
+  ## para presidencial y estados
+  candidatos_edo <- candidatos  |>
+    filter(ID_ESTADO == remesas_tbl$ID_ESTADO[row])
+  
+  lista_candidatos <- candidatos_edo$CANDIDATO |> unique()
+  lista_coaliciones <- candidatos_edo$PARTIDO |> unique()
+  
+  data_in <- readr::read_delim(paste0(path_cortes,file_path), "|", escape_double = FALSE,
+                               trim_ws = TRUE, skip = 1,show_col_types = FALSE) %>%
+    #    rename(ID_ESTADO = iD_ESTADO) %>% #cambia nombre de columna iD_ESTADO a mayusculas
+    mutate(OTROS = CNR + NULOS) %>%
+    mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
+                                  stringr::str_pad(SECCION, 4, pad = "0"),
+                                  TIPO_CASILLA,
+                                  stringr::str_pad(ID_CASILLA, 2, pad = "0"),
+                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
+  
+  temp <- data_in |>
+    select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_coaliciones),all_of(lista_candidatos),TOTAL)
+  
+  resultados <- tibble(path=file_path)
+  resultados$ncasillas <- n_distinct(temp$CLAVE_CASILLA)
+  
+  resultados
 }
+```
 
-plotDF_edo(df6,"Colima")
-plotDF_edo(df8,"Chihuahua")
-plotDF_edo(df16,"Michoacan")
-plotDF_edo(df18,"Nayarit")
-plotDF_edo(df32,"Zacatecas")
+```{r}
+
+# read_sum_remesa(1)
+
+out_resultados <- map_df(1:nrow(remesas_tbl), function(rep) {
+  read_sum_remesa(rep)
+  })
+
+remesas_resultados <- remesas_tbl |> 
+  select(path,election,remesa = filename) |>
+  left_join(out_resultados) 
+  
+```
+## Presidencial
+```{r}
+remesas_resultados |>
+  dplyr::filter(election == "presidente") |>
+  dplyr::select(-path) 
 ```
