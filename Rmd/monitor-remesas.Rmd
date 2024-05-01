@@ -92,7 +92,7 @@ read_sum_remesa <- function(row){ # row <-10
    if(diputados) {
     votacion_coalicion_check <- data_in |>
       dplyr::select(CLAVE_CASILLA) |>
-      dplyr::mutate(ch_sums_coa = TRUE) ## could be NA, but giving TRUE . Doesnt apply to diputados. 
+      dplyr::mutate(ch_sums_coa = FALSE) ## could be NA, but giving FALSE . Doesnt apply to diputados. 
   } else {
     ## para presidencial y estados
     votacion_coalicion_check <- data_in |>
