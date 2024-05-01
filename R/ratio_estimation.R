@@ -50,20 +50,16 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
     ungroup() %>%
     rename(strata = {{ stratum }})
 
-  # collapse strata if needed
-  if(n_distinct(data_tbl$strata) < n_distinct(data_stratum$strata)) {
-    data_stratum_collapsed <- collapse_strata(data_tbl, data_stratum)
-  } else {
-    data_stratum_collapsed <- data_stratum
-  }
   data_tbl <- data_tbl %>%
-    left_join(data_stratum_collapsed, by = "strata")
+    left_join(data_stratum, by = "strata")
+
   data_long_tbl <- data_tbl %>%
     mutate(internal_id = row_number())  %>%
     group_by(strata) %>%
     mutate(n_h = n()) %>%
     ungroup() %>%
     tidyr::pivot_longer(cols = {{ parties }}, names_to = "party", values_to = "n_votes")
+
   ratios <-  data_long_tbl %>%
     mutate(n_aux = (n_strata / n_h) * n_votes) %>%
     group_by(strata, party) %>%
@@ -107,10 +103,19 @@ sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
 }
 # auxiliary function, bootstrap samples of the data and computes ratio estimator
 sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties){
+
+  # collapse strata if any empty
+  if(n_distinct(data_tbl$strata) < n_distinct(data_stratum$strata)) {
+    data_stratum_collapsed <- collapse_strata(data_tbl, data_stratum)
+  } else {
+    data_stratum_collapsed <- data_stratum
+  }
+
   sample_boot <- select_sample_prop(data_tbl, stratum = strata, frac = 1,
                                     replace = TRUE)
   ratio_estimation(data_tbl = sample_boot %>% dplyr::select(-n_strata),
-                   stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
+                   stratum = strata, data_stratum = data_stratum_collapsed,
+                   n_stratum = n_strata,
                    parties = {{ parties }}, std_errors = FALSE)
 
 }
