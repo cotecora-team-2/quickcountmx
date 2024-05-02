@@ -163,7 +163,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
                                    nominal_list_var = NULL, num_cores = 5,
                                    inv_metric_list = NULL, nominal_max = 1000,
-                                   sig_figs = 7, ...){
+                                   frac = 0.04,
+                                   sig_figs = 8, ...){
 
   sampling_frame <- sampling_frame %>%
     ungroup() %>%
@@ -178,13 +179,14 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     ungroup() %>%
     rename(region = {{ split_var }})
 
-  #total_nominal <- sampling_frame_tbl |> summarise(total_nominal = sum(LISTA_NOMINAL_CASILLA))
-  regions <- unique(sampling_frame$region)
+
   sampling_frame_split <- sampling_frame |> split(sampling_frame$region)
-  data_split <- data_tbl |> split(data_tbl$region)
+  regions <- names(sampling_frame_split)
+  data_tbl$region_f <- factor(data_tbl$region, levels = regions)
+  data_split <- data_tbl |> split(data_tbl$region_f)
 
   res_list <- parallel::mclapply(1:length(regions), function(i){
-
+  #  res_list <- lapply(1:length(regions), function(i){
     sampling_frame_slice <- sampling_frame_split[[i]]
     data_slice_tbl <- data_split[[i]]
     region_name <- sampling_frame_slice$region[1]
@@ -193,9 +195,10 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     } else {
       inv_metric_slice <- NULL
     }
+    prop_obs_slice <- (nrow(data_tbl)/nrow(sampling_frame))/frac
     fit_slice <- hb_estimation(sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
-                         inv_metric = inv_metric_slice, erase_output_files = FALSE,
-                         return_fit = TRUE, nominal_max = nominal_max, sig_figs = sig_figs, ...)
+                         inv_metric = inv_metric_slice,
+                         nominal_max = nominal_max, sig_figs = sig_figs, prop_obs = prop_obs_slice,...)
     parties_names <- fit_slice$estimates$party
    y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
      as_tibble() |>
