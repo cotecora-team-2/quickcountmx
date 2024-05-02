@@ -12,7 +12,8 @@ hb_estimation_parallel(
   num_cores = 5,
   inv_metric_list = NULL,
   nominal_max = 1000,
-  sig_figs = 7,
+  frac,
+  sig_figs = 8,
   ...
 )
 }
@@ -32,6 +33,8 @@ hb_estimation_parallel(
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
 stations without fixed nominal list.}
+
+\item{frac}{Sampling fraction for full sample size.}
 
 \item{sig_figs}{Number of significant figures for Stan output}
 

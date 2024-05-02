@@ -153,6 +153,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' stations without fixed nominal list.
 #' @param sig_figs Number of significant figures for Stan output
 #' @param nominal_list_var Unquoted name of variable with nominal list of voters
+#' @param frac Sampling fraction for full sample size.
 #' @param ... Other parameters passed to hb_estimation.
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
@@ -163,7 +164,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
                                    nominal_list_var = NULL, num_cores = 5,
                                    inv_metric_list = NULL, nominal_max = 1000,
-                                   frac = 0.04,
+                                   frac,
                                    sig_figs = 8, ...){
 
   sampling_frame <- sampling_frame %>%
