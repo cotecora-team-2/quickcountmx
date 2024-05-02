@@ -197,6 +197,7 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
       inv_metric_slice <- NULL
     }
     prop_obs_slice <- (nrow(data_tbl)/nrow(sampling_frame))/frac
+    prop_obs_slice <- min(prop_obs_slice, 0.95)
     fit_slice <- hb_estimation(sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
                          inv_metric = inv_metric_slice,
                          nominal_max = nominal_max, sig_figs = sig_figs, prop_obs = prop_obs_slice,...)
