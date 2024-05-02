@@ -34,6 +34,17 @@ fs::file_copy(remesas_copiar, new_path = path_copiar, overwrite = TRUE)
 
 ```{r, echo=FALSE,message=FALSE}
 path_cortes <- params$path_local
+
+library(knitr)
+library(kableExtra)
+formatear_tabla <- function(x_tbl, scroll = FALSE){
+    tabla <- knitr::kable(x_tbl, type = "html") %>%
+        kableExtra::kable_styling(bootstrap_options = c("paper", "hover", "condensed", "responsive"),
+                      full_width = FALSE, font_size = 10, fixed_thead = TRUE) 
+    if(scroll) tabla <- tabla %>% scroll_box(width = "780px") 
+    tabla 
+}
+
 #remesas_ver <- list.files(paste0(path_cortes,"ver"), full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 remesas_lst <- list.files(path_cortes, full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 
@@ -174,7 +185,7 @@ read_sum_remesa <- function(row){ # row <-10
 }
 ```
 
-```{r}
+```{r,echo=FALSE,message=FALSE}
 # read_sum_remesa(1)
 
 out_resultados <- map_df(1:nrow(remesas_tbl), function(rep) {
@@ -188,10 +199,79 @@ remesas_resultados <- remesas_tbl |>
 
 write_csv(remesas_resultados, file = paste0(output_path,trunc(Sys.time(), "secs"),"_checks.csv"))
 ```
-## Presidencial
+
+## Graficas checks total (%)
 ```{r}
+
 remesas_resultados |>
-  dplyr::filter(election == "presidente") |>
   dplyr::select(-path) |>
-  dplyr::slice_tail(n=10)
+  dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
+  ggplot(aes(x = day_time, y = per_cas_problem, colour = election, group = election)) +
+  geom_line() + geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
+  labs(title=paste("Checks: total por eleccion"))
+
+
 ```
+
+## Graficas checks por eleccion
+```{r}
+
+plot_checks_per <- function(eleccion){
+remesas_resultados |>
+  dplyr::filter(election == eleccion) |>
+  dplyr::select(-path) |>
+  dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
+  #dplyr::slice_tail(n=10) |>
+  tidyr::pivot_longer(cols = cas_out_marco:per_cas_problem, names_to = "checks",
+                        values_to = "value") |>
+  dplyr::filter(checks != "per_cas_problem")|>
+  dplyr::mutate(value = value / ncas) |>
+  ggplot(aes(x = day_time, y = value, colour = checks, group = checks)) +
+  geom_line() + geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
+  labs(title=paste("Checks: ",eleccion))
+}
+
+plot_checks_per("presidente")
+plot_checks_per("mor")
+plot_checks_per("tab")
+plot_checks_per("ver")
+plot_checks_per("diputados")
+
+```
+
+## Tablas ultimas 10 remesas, checks por eleccion
+```{r}
+
+tablas_checks_per <- function(eleccion){
+remesas_resultados |>
+  dplyr::select(-path) |>
+  dplyr::filter(election == eleccion) |>
+  dplyr::mutate(part_crude = scales::percent(part_crude,accuracy = 0.01)) |>
+  dplyr::mutate(per_cas_problem = scales::percent(per_cas_problem,accuracy = 0.01)) |>
+  dplyr::slice_tail(n=10) |>
+  formatear_tabla()
+}
+
+tablas_checks_per("presidente")
+tablas_checks_per("mor")
+tablas_checks_per("tab")
+tablas_checks_per("ver")
+tablas_checks_per("diputados")
+
+```
+## Graficas participacion cruda (%)
+```{r}
+
+remesas_resultados |>
+  dplyr::select(-path) |>
+  dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
+  ggplot(aes(x = day_time, y = part_crude, colour = election, group = election)) +
+  geom_line() + geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
+  labs(title=paste("Checks: participacion cruda"))
+
+
+```
+
