@@ -1,18 +1,39 @@
 ---
 title: "Monitoreo Remesas el dia de la elección"
 output: html_document
+params:
+  path_local: "remesas_local"
+  path_server: "../data-raw/cortes-sim1/"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, echo=FALSE,message=FALSE}
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(readxl)
 
-#path_cortes <- "/home/rstudio/workspace/cotecora_s14/buzon2/"
-path_cortes <- "../data-raw/cortes-sim1/"
+#create directories if needed
+walk(c("presidente", "diputados", "ver", "tab", "mor"), 
+     \(x) fs::path(params$path_local, x) %>% fs::dir_create())
+
+# copy remesas to local folder
+remesas_server <- list.files(params$path_server, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
+remesas_local <- list.files(params$path_local, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
+
+remesas_copiar <- remesas_server[!(basename(remesas_server) %in% basename(remesas_local))]
+
+path_copiar <- fs::path_split(remesas_copiar %>% fs::path()) %>% 
+  map_chr(\(x) fs::path(params$path_local, x[length(x) - 1], x[length(x)]))
+
+fs::file_copy(remesas_copiar, new_path = path_copiar, overwrite = TRUE)
+```
+
+
+```{r, echo=FALSE,message=FALSE}
+path_cortes <- params$path_local
 #remesas_ver <- list.files(paste0(path_cortes,"ver"), full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 remesas_lst <- list.files(path_cortes, full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 
@@ -56,7 +77,6 @@ for(folder in folders_election) { # folder <- folders_election[1]
 ```
 
 ```{r,echo=FALSE,message=FALSE}
-
 read_sum_remesa <- function(row){ # row <-10
  # print(paste(row,Sys.time(), sep = " ="))
   
@@ -66,7 +86,7 @@ read_sum_remesa <- function(row){ # row <-10
   print(paste(file_path))
   
   if(diputados) {
-    candidatos_elec <- candidatos_tbl  |>
+    candidatos_elec <- candidatos_tbl |>
       filter(ID_ESTADO == 999)
   } else {
     ## para presidencial y estados
@@ -79,7 +99,7 @@ read_sum_remesa <- function(row){ # row <-10
   lista_columnas <- c(lista_coaliciones,lista_candidatos) |> unique()
 
   
-  data_in <- readr::read_delim(paste0(path_cortes,file_path), "|", escape_double = FALSE,
+  data_in <- readr::read_delim(paste(path_cortes,file_path, sep = "/"), "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1,show_col_types = FALSE) |>
     dplyr::mutate(OTROS = CNR + NULOS) |>
     dplyr::mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
@@ -155,7 +175,6 @@ read_sum_remesa <- function(row){ # row <-10
 ```
 
 ```{r}
-
 # read_sum_remesa(1)
 
 out_resultados <- map_df(1:nrow(remesas_tbl), function(rep) {
