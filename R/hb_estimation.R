@@ -181,13 +181,13 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     rename(region = {{ split_var }})
 
 
+  regions <- unique(sampling_frame$region) |> sort()
+  sampling_frame$region_f <- factor(sampling_frame$region, levels = regions)
   sampling_frame_split <- sampling_frame |> split(sampling_frame$region)
-  regions <- names(sampling_frame_split)
   data_tbl$region_f <- factor(data_tbl$region, levels = regions)
   data_split <- data_tbl |> split(data_tbl$region_f)
 
   res_list <- parallel::mclapply(1:length(regions), function(i){
-  #  res_list <- lapply(1:length(regions), function(i){
     sampling_frame_slice <- sampling_frame_split[[i]]
     data_slice_tbl <- data_split[[i]]
     region_name <- sampling_frame_slice$region[1]
@@ -214,7 +214,7 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
   y_out_tbl <- bind_rows(res_list |> purrr::map( ~.x$y_out)) |>
     group_by(.draw) |>
     summarise(across(contains("y_out"), ~ sum(.x, na.rm = TRUE))) |>
-    pivot_longer(cols = contains("y_out"), names_to = "party", values_to = "votes") |>
+    tidyr::pivot_longer(cols = contains("y_out"), names_to = "party", values_to = "votes") |>
     group_by(.draw) |>
     mutate(total_votes = sum(votes)) |>
     mutate(prop_votes = votes / total_votes) |>

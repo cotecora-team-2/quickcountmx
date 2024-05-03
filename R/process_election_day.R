@@ -94,7 +94,32 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     mutate(ln = LISTA_NOMINAL) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
   if(estado_str != "00"){
-    table_frame <- table_frame |>  filter(ID_ESTADO == as.numeric(estado_str))
+    table_frame <- table_frame |>  filter(ID_ESTADO == (estado_str))
+  }
+  if(estado_str == "00"){
+    circ_tbl <- tibble(
+      circ = "1",
+      ID_ESTADO = c(2,3,8,10,14,18,25,26)) |>
+      bind_rows(tibble(
+        circ = "2",
+        ID_ESTADO = c(1, 5, 11,19,24,28,32)
+      )) |>
+      bind_rows(tibble(
+        circ = "3",
+        ID_ESTADO = c(4, 7,20, 23, 27,30,31)
+      )) |>
+      bind_rows(tibble(
+        circ = "4",
+        ID_ESTADO = c(9,12,13,17,21,29)
+      )) |>
+      bind_rows(tibble(
+        circ = "5",
+        ID_ESTADO = c(6,15,16,22)
+      ))
+    circ_tbl <- circ_tbl |>
+      mutate(ID_ESTADO = stringr::str_pad(ID_ESTADO, 2, pad = "0"))
+    table_frame <- table_frame |>
+      left_join(circ_tbl, by = "ID_ESTADO")
   }
 
   candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv")
@@ -180,7 +205,25 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   }
 
   # run model ###################
+  #print(estado_str)
   fit_time <- system.time(
+    if(estado_str == "00"){
+      fit <- hb_estimation_parallel(muestra_m, stratum = estrato, id_station = no_casilla,
+                           sampling_frame = table_frame,
+                           parties = all_of(lista_candidatos),
+                           model = "mlogit",
+                           covariates = all_of(c("seccion_urbana")),
+                           num_warmup = 300,
+                           num_iter = 500,
+                           nominal_max = as.numeric(nominal_max),
+                           chains = 3, seed = as.numeric(seed),
+                           threads_per_chain = 1, inv_metric_list = inv_metric,
+                           nominal_list_var = LISTA_NOMINAL,
+                           erase_output_files = FALSE,
+                           return_fit = TRUE,
+                           split_var = circ,
+                           num_cores = 5, frac = 0.045)
+    } else {
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                          sampling_frame = table_frame,
                          parties = all_of(lista_candidatos), prop_obs = prop_obs,
@@ -189,6 +232,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
                          nominal_max = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed),
                          threads_per_chain = 1, inv_metric = inv_metric)
+    }
   )
   print(fit_time)
   if(even == "0") m <- 1
