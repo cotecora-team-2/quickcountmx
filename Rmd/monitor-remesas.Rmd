@@ -69,7 +69,7 @@ candidatos_tbl <- bind_rows(candidatos,coalitions_tbl)
 
 ## leer marco para ver si hay casillas que no estan en el marco 
 # NB esto es marco simulacro 2: se necesita actuaizar con el marco que toque.
-marco_2024_CVE_CASILLA <- readxl::read_excel("../data-raw/UBICACION_CASILLAS_ARE_240426_Ok.xlsx") |>
+marco_2024_CVE_CASILLA <- readr::read_rds("../data-raw/marco_2024.rds") |>
   dplyr::mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
                                 stringr::str_pad(SECCION, 4, pad = "0"),
                                 TIPO_CASILLA,
