@@ -26,8 +26,13 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
     relocate(c(EQ,EN,R), .before = everything()) |>
     relocate(c(LMU), .after = last_col())
 
-  readr::write_csv(tab_seats_candidatos, paste0(path_out, "/", team, 'dip',
-                                               EN, R, ".csv"))
+  # path_out must be set to opt/cotecora
+  path_seats <- paste0(path_out, "/buzon_diputados_escano/equipo2dip")
+  if(dir.exists(path_seats)) {
+    readr::write_csv(tab_seats_candidatos, paste0(path_seats, "/", team, 'dip',
+                                                  EN, R, ".csv"))
+  }
+
   readr::write_csv(tab_seats_candidatos, paste0(path_mailbox, "/", team, 'dip',
                                                 EN, R, ".csv"))
 
@@ -56,11 +61,14 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
     relocate(c(EQ,EN,R), .before = everything()) |>
     relocate(c(PART, LMU), .after = last_col())
 
-  readr::write_csv(tab_prop_candidatos, paste0(path_out, "/", team,
-                                                EN, R, ".csv"))
+  path_percent <- paste0(path_out, "/buzon_diputados/equipo2")
+  if(dir.exists(path_percent)) {
+    readr::write_csv(tab_prop_candidatos, paste0(path_percent, "/", team,
+                                                 EN, R, ".csv"))
+  }
+
   readr::write_csv(tab_prop_candidatos, paste0(path_mailbox, "/", team,
                                                EN, R, ".csv"))
-
 }
 
 #' Automatically process batch of new data, and write estimates in correct
