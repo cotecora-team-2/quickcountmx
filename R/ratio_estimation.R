@@ -94,8 +94,8 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
 sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
   # B bootstrap replicates
   ratio_reps <- purrr::map(1:B, function(b){
-      sd_ratio_estimation_aux(data_tbl = data_tbl,
-                              data_stratum = data_stratum, parties = {{ parties }})})
+    sd_ratio_estimation_aux(data_tbl = data_tbl,
+                            data_stratum = data_stratum, parties = {{ parties }})})
   std_errors <- bind_rows(ratio_reps) %>%
     group_by(party) %>%
     summarise(std_error = stats::sd(prop), .groups = "drop")
@@ -303,7 +303,7 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl,
 assign_all_seats <- function(reps_list, assignment_tbl) {
 
   majority_seats_tbl <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
-    party_name = party, candidate_name = candidato)
+                                        party_name = party, candidate_name = candidato)
 
   total_tbl <- add_max_seats(reps_list$total_tbl, majority_seats_tbl)
 
@@ -349,8 +349,8 @@ add_max_seats <- function(total_tbl, majority_seats_tbl) {
     dplyr::mutate(
       #votación nal. emitida
       prop_vot_nal = ifelse(prop < 0.03 |
-                          stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
-                        0, prop),
+                              stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
+                            0, prop),
       prop_vot_nal = prop_vot_nal / sum(prop_vot_nal),
     ) |>
     dplyr::left_join(majority_seats_tbl, by = c("rep" = "rep", "party" = "candidate")) |>
@@ -401,7 +401,7 @@ assign_prop <- function(total_tbl) {
 #' must be named party.
 #' @export
 ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
-                                           coalitions_tbl, assignment_tbl, B = 50,
+                                       coalitions_tbl, assignment_tbl, B = 500,
                                        seed = NA) {
   data_tbl
   estimates <- bootstrap_diputados(data_tbl = data_tbl, stratum = {{stratum}},
@@ -419,11 +419,14 @@ ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum
     ungroup()
 
   assign_seats_rep |>
+    dplyr::filter(party != "NULOS", party != "CNR") %>%
     dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "IND", party)) |>
+    dplyr::group_by(rep) %>%
+    dplyr::mutate(prop = prop / sum(prop)) %>%
     dplyr::group_by(party) |>
     dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
-                                                  inf = ~ quantile(., 0.02),
-                                                  sup = ~ quantile(., 0.98)))) |>
+                                                                inf = ~ quantile(., 0.02),
+                                                                sup = ~ quantile(., 0.98)))) |>
     ungroup() |>
     dplyr::bind_rows(part_tbl)
 
