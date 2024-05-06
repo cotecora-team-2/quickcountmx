@@ -3,7 +3,7 @@ title: "Monitoreo Remesas el dia de la elección"
 output: html_document
 params:
   path_local: "remesas_local"
-  path_server: "../data-raw/cortes-sim1/"
+  path_server: "/Volumes/cortes"
 ---
 
 ```{r setup, include=FALSE}
@@ -20,7 +20,8 @@ walk(c("presidente", "diputados", "ver", "tab", "mor"),
      \(x) fs::path(params$path_local, x) %>% fs::dir_create())
 
 # copy remesas to local folder
-remesas_server <- list.files(params$path_server, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
+remesas_server <- list.files(params$path_server, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*") %>% 
+  stringr::str_subset("presidente|diputados|ver|tab|mor")
 remesas_local <- list.files(params$path_local, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
 
 remesas_copiar <- remesas_server[!(basename(remesas_server) %in% basename(remesas_local))]
@@ -48,7 +49,10 @@ formatear_tabla <- function(x_tbl, scroll = FALSE){
 #remesas_ver <- list.files(paste0(path_cortes,"ver"), full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 remesas_lst <- list.files(path_cortes, full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
 
+remesas_fn_lst <- list.files(path_cortes, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
+
 remesas_tbl <- tibble(path = remesas_lst) |>
+  dplyr::mutate(n_casillas = map_dbl(remesas_fn_lst, ~read.table(., col.names = FALSE, nrows = 1)[1, 1])) %>% 
   dplyr::mutate(path2 = path) |>
   tidyr::separate(path2, into = c("election","filename"), sep = "/") |>
   dplyr::mutate(elec_edo = stringr::str_sub(filename,8,11)) |>
@@ -56,7 +60,8 @@ remesas_tbl <- tibble(path = remesas_lst) |>
   dplyr::arrange(elec_edo,filename) |>
   dplyr::group_by(elec_edo) |>
   dplyr::mutate(last_remesa = (row_number() == n()))|>
-  dplyr::ungroup()
+  dplyr::ungroup() %>% 
+  filter(n_casillas > 0)
 
 # presidencial y estados
 candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2024.csv")
