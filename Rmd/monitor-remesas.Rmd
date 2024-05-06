@@ -208,14 +208,16 @@ write_csv(remesas_resultados, file = paste0(output_path,trunc(Sys.time(), "secs"
 ## Graficas checks total (%)
 ```{r}
 
+max_per_cas_problem <- round(max(remesas_resultados$per_cas_problem)+0.01,2)
+
 remesas_resultados |>
   dplyr::select(-path) |>
   dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
   ggplot(aes(x = day_time, y = per_cas_problem, colour = election, group = election)) +
   geom_line() + geom_point() +
+  ylim(0,max_per_cas_problem)+  
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
   labs(title=paste("Checks: total por eleccion"))
-
 
 ```
 
@@ -234,6 +236,7 @@ remesas_resultados |>
   dplyr::mutate(value = value / ncas) |>
   ggplot(aes(x = day_time, y = value, colour = checks, group = checks)) +
   geom_line() + geom_point() +
+  ylim(0,max_per_cas_problem)+  
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
   labs(title=paste("Checks: ",eleccion))
 }
