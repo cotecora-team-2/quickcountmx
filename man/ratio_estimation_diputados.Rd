@@ -12,7 +12,8 @@ ratio_estimation_diputados(
   coalitions_tbl,
   assignment_tbl,
   B = 500,
-  seed = NA
+  seed = NA,
+  parametric = FALSE
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ defaults to 50.}
 
 \item{seed}{integer value used to set the state of the random number
 generator (optional).}
+
+\item{parametric}{logical indicating if parametric bootstrap should be used. By default
+is false, indicating non-parametric bootstrap.}
 }
 \value{
 A \code{list} including two componentes: point estimates at national level
