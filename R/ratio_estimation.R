@@ -269,9 +269,8 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
     estimates_strata_tbl <- alpha_tbl |> left_join(num_stations_tbl, by = "strata") |>
       dplyr::group_split(strata) |>
       purrr::map(function(strata_tbl){
-        sim_theta <- as.numeric(rdirichlet(1, strata_tbl$estimate))
         num_votes <- strata_tbl$total_votes[[1]]
-        sim_votes <- purrr::map(num_votes, ~rmultinom(1, .x, sim_theta)) |>
+        sim_votes <- purrr::map(num_votes, ~rmultinom(1, .x, as.numeric(rdirichlet(1, strata_tbl$estimate)))) |>
           purrr::reduce(`+`)
         strata_tbl$prop_votes <- as.numeric(sim_votes) / sum(sim_votes)
         strata_tbl
