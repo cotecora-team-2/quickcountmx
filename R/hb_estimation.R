@@ -93,6 +93,12 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
       iter_warmup <- num_warmup
     }
   }
+  if(model == "mlogit-pres"){
+    path <- system.file("stan", "model_parties_mlogit_corr_pres.stan", package = "quickcountmx")
+    adapt_delta <- adapt_delta
+    max_treedepth <- max_treedepth
+    iter_warmup <- num_warmup
+  }
 
   model <- cmdstanr::cmdstan_model(path, cpp_options = list(stan_threads = TRUE))
   ## fit
@@ -205,8 +211,12 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
    y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
      as_tibble() |>
      mutate(region = region_name)
+   total_out_tbl <-  fit_slice$fit$draws(c("total_out"), format = "df") |>
+     as_tibble() |>
+     mutate(region = region_name)
    estimates_slice <- fit_slice$estimates |> mutate(region = region_name)
-   res_slice <- list(fit = fit_slice, y_out = y_out_tbl, parties_names = parties_names,
+   res_slice <- list(fit = fit_slice, y_out = y_out_tbl, total_out = total_out_tbl,
+                     parties_names = parties_names,
         estimates_slice = estimates_slice, region_name = region_name)
    file.remove(fit_slice$fit$output_files())
    res_slice
@@ -219,9 +229,9 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     mutate(total_votes = sum(votes)) |>
     mutate(prop_votes = votes / total_votes) |>
     ungroup()
-  part_tbl <- y_out_tbl |>
+  part_tbl <- bind_rows(res_list |> purrr::map( ~.x$total_out)) |>
     group_by(.draw) |>
-    summarise(total_votes = first(total_votes)) |>
+    summarise(total_votes = sum(total_out)) |>
     mutate(prop_votes = total_votes / total_nominal) |>
     mutate(party = "part")
   estimates_tbl <- y_out_tbl |> bind_rows(part_tbl) |>

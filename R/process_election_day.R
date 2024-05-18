@@ -118,8 +118,18 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
       ))
     circ_tbl <- circ_tbl |>
       mutate(ID_ESTADO = stringr::str_pad(ID_ESTADO, 2, pad = "0"))
+    zonas_tbl <- tibble(
+      zona = "1",
+      ID_ESTADO = c(2,3,8,10,14,18,25,26, 1, 5, 11,19,24,28,32,4, 7,20)) |>
+      bind_rows(tibble(
+        zona = "2",
+        ID_ESTADO = c(6,15,16,22, 9,12,13,17,21,29, 23, 27,30,31)
+      ))
+    zonas_tbl <- zonas_tbl |>
+      mutate(ID_ESTADO = stringr::str_pad(ID_ESTADO, 2, pad = "0"))
     table_frame <- table_frame |>
-      left_join(circ_tbl, by = "ID_ESTADO")
+      left_join(circ_tbl, by = "ID_ESTADO") |>
+      left_join(zonas_tbl, by = "ID_ESTADO")
   }
 
   candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv")
@@ -211,18 +221,19 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
       fit <- hb_estimation_parallel(muestra_m, stratum = estrato, id_station = no_casilla,
                            sampling_frame = table_frame,
                            parties = all_of(lista_candidatos),
-                           model = "mlogit",
+                           model = "mlogit-pres",
                            covariates = all_of(c("seccion_urbana")),
-                           num_warmup = 300,
-                           num_iter = 500,
+                           num_warmup = as.numeric(n_warmup),
+                           num_iter = as.numeric(n_iter),
                            nominal_max = as.numeric(nominal_max),
-                           chains = 3, seed = as.numeric(seed),
+                           chains = 5, seed = as.numeric(seed),
                            threads_per_chain = 1, inv_metric_list = inv_metric,
                            nominal_list_var = LISTA_NOMINAL,
                            erase_output_files = FALSE,
                            return_fit = TRUE,
-                           split_var = circ,
-                           num_cores = 5, frac = 0.045)
+                           split_var = zona,
+                           sig_figs = 12,
+                           num_cores = 2, frac = 0.047)
     } else {
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                          sampling_frame = table_frame,
