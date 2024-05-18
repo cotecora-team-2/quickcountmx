@@ -255,14 +255,18 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   data_parties_tbl <- data_parties_long_tbl |>
     tidyr::pivot_wider(names_from = party, values_from = n_votes, values_fill = 0)
 
+  votes_ignore <- c("CNR", "NULOS")
   ratio <- ratio_estimation(data_parties_tbl, strata, stratum_tbl,
                             n_stratum = n_strata,
                             parties = tidyr::all_of(parties_chr), B=0, std_errors = FALSE) |>
-    mutate(prop = prop / 100)
+    mutate(prop = prop / 100) %>%
+    filter(!(party %in% votes_ignore)) %>%
+    mutate(prop = ifelse(party == "part", prop, prop / sum(prop * (party != "part"))))
 
 
   if(!is.null(alpha_tbl)){
-    num_stations_tbl <- data_parties_long_tbl |> group_by(internal_id_bs, strata) |>
+    num_stations_tbl <- data_parties_long_tbl |>
+      group_by(internal_id_bs, strata) |>
       summarise(total_votes = sum(n_votes), .groups = "drop") |>
       group_by(strata) |>
       summarise(total_votes = list(total_votes), .groups = "drop")
@@ -285,7 +289,8 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
   }
 
 
-  list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
+  list(estimates_total = ratio,
+       estimates_strata = estimates_strata_tbl %>% filter(!party %in% votes_ignore))
 }
 
 #' @name assign_deputy_seats
@@ -469,9 +474,11 @@ ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum
   assign_seats_rep |>
     dplyr::filter(party != "NULOS", party != "CNR") %>%
     dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "IND", party)) |>
-    dplyr::group_by(rep) %>%
-    dplyr::mutate(prop = prop / sum(prop)) %>%
-    dplyr::group_by(party) |>
+    dplyr::group_by(party, rep) %>%
+    dplyr::summarise(prop = sum(prop),
+                     n_seats_total = sum(n_seats_total),
+                     .groups = "drop_last") %>%
+    dplyr::group_by(party) %>%
     dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
                                                                 inf = ~ quantile(., 0.02),
                                                                 sup = ~ quantile(., 0.98)))) |>
