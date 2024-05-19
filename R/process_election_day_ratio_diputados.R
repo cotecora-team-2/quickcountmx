@@ -1,3 +1,4 @@
+#WARN: path_out hard-coded below is ignoring input
 write_results_ratio_diputados <- function(df, file_name, team, path_out, path_mailbox){
   EN <- "40"
   R <- stringr::str_sub(file_name, 12, 17)
@@ -26,8 +27,14 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
     relocate(c(EQ,EN,R), .before = everything()) |>
     relocate(c(LMU), .after = last_col())
 
-  readr::write_csv(tab_seats_candidatos, paste0(path_out, "/", team, 'dip',
-                                               EN, R, ".csv"))
+  # path_seats <- paste0(path_out, "/buzon_diputados_escano/equipo2dip")
+
+  path_seats <- "~/servidorine/buzon_diputados_escano_equipo2dip"
+  if(dir.exists(path_seats)) {
+    readr::write_csv(tab_seats_candidatos, paste0(path_seats, "/", team, 'dip',
+                                                  EN, R, ".csv"))
+  }
+
   readr::write_csv(tab_seats_candidatos, paste0(path_mailbox, "/", team, 'dip',
                                                 EN, R, ".csv"))
 
@@ -36,9 +43,9 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
     dplyr::select(party, contains("prop")) |>
     mutate(party = ifelse(party == "part", "PART", party)) %>%
     filter(party != "NULOS", party != "CNR") |>
-    mutate(inf = round(100 * prop_inf, 2)) |>
-    mutate(sup = round(100 * prop_sup, 2)) |>
-    mutate(prop = round(100 * prop_median, 2)) |>
+    mutate(inf = round(floor(1000 * prop_inf) / 10, 1)) |>
+    mutate(sup = round(ceiling(1000 * prop_sup) / 10, 1)) |>
+    mutate(prop = round(100 * prop_median, 1)) |>
     select(-contains("prop_")) |>
     tibble::column_to_rownames(var="party") |>
     tibble::rownames_to_column() |>
@@ -56,11 +63,16 @@ write_results_ratio_diputados <- function(df, file_name, team, path_out, path_ma
     relocate(c(EQ,EN,R), .before = everything()) |>
     relocate(c(PART, LMU), .after = last_col())
 
-  readr::write_csv(tab_prop_candidatos, paste0(path_out, "/", team,
-                                                EN, R, ".csv"))
+  # path_percent <- paste0(path_out, "/buzon_diputados/equipo2")
+
+  path_percent <- "~/servidorine/buzon_diputados_equipo2"
+  if(dir.exists(path_percent)) {
+    readr::write_csv(tab_prop_candidatos, paste0(path_percent, "/", team,
+                                                 EN, R, ".csv"))
+  }
+
   readr::write_csv(tab_prop_candidatos, paste0(path_mailbox, "/", team,
                                                EN, R, ".csv"))
-
 }
 
 #' Automatically process batch of new data, and write estimates in correct
@@ -89,7 +101,7 @@ ratio_diputados_process_batch <- function(path_name, file_name, path_out, path_m
 
   coalitions_tbl <- readr::read_csv("data-raw/coalitions_tbl_2024.csv")
 
-  stratum_tbl <- readr::read_csv("data-raw/statum_size_nal_2024.csv")
+  stratum_tbl <- readr::read_csv("data-raw/stratum_size_nal_2024.csv")
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
                                trim_ws = TRUE, skip = 1) |>

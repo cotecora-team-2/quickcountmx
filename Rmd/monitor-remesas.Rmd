@@ -1,0 +1,285 @@
+---
+title: "Monitoreo Remesas el dia de la elección"
+output: html_document
+params:
+  path_local: "remesas_local"
+  path_server: "/Volumes/cortes"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(readxl)
+
+#create directories if needed
+walk(c("presidente", "diputados", "ver", "tab", "mor"), 
+     \(x) fs::path(params$path_local, x) %>% fs::dir_create())
+
+# copy remesas to local folder
+remesas_server <- list.files(params$path_server, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*") %>% 
+  stringr::str_subset("presidente|diputados|ver|tab|mor")
+remesas_local <- list.files(params$path_local, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
+
+remesas_copiar <- remesas_server[!(basename(remesas_server) %in% basename(remesas_local))]
+
+path_copiar <- fs::path_split(remesas_copiar %>% fs::path()) %>% 
+  map_chr(\(x) fs::path(params$path_local, x[length(x) - 1], x[length(x)]))
+
+fs::file_copy(remesas_copiar, new_path = path_copiar, overwrite = TRUE)
+```
+
+
+```{r, echo=FALSE,message=FALSE}
+path_cortes <- params$path_local
+
+library(knitr)
+library(kableExtra)
+formatear_tabla <- function(x_tbl, scroll = FALSE){
+    tabla <- knitr::kable(x_tbl, type = "html") %>%
+        kableExtra::kable_styling(bootstrap_options = c("paper", "hover", "condensed", "responsive"),
+                      full_width = FALSE, font_size = 10, fixed_thead = TRUE) 
+    if(scroll) tabla <- tabla %>% scroll_box(width = "780px") 
+    tabla 
+}
+
+#remesas_ver <- list.files(paste0(path_cortes,"ver"), full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
+remesas_lst <- list.files(path_cortes, full.names = FALSE, recursive = TRUE, pattern = "REMESAS*")
+
+remesas_fn_lst <- list.files(path_cortes, full.names = TRUE, recursive = TRUE, pattern = "REMESAS*")
+
+remesas_tbl <- tibble(path = remesas_lst) |>
+  dplyr::mutate(n_casillas = map_dbl(remesas_fn_lst, ~read.table(., col.names = FALSE, nrows = 1)[1, 1])) %>% 
+  dplyr::mutate(path2 = path) |>
+  tidyr::separate(path2, into = c("election","filename"), sep = "/") |>
+  dplyr::mutate(elec_edo = stringr::str_sub(filename,8,11)) |>
+  dplyr::mutate(ID_ESTADO = as.numeric(stringr::str_sub(filename,10,11))) |>
+  dplyr::arrange(elec_edo,filename) |>
+  dplyr::group_by(elec_edo) |>
+  dplyr::mutate(last_remesa = (row_number() == n()))|>
+  dplyr::ungroup() %>% 
+  filter(n_casillas > 0)
+
+# presidencial y estados
+candidatos <- readr::read_csv("../data-raw/estados_candidatos_partidos_2024.csv")
+# diputados
+coalitions_tbl <- readr::read_csv("../data-raw/coalitions_tbl_2024.csv") |>
+  dplyr::mutate(ID_ESTADO = 999) |>
+  dplyr::select(ID_ESTADO, CANDIDATO = party,PARTIDO =coalition)
+
+candidatos_tbl <- bind_rows(candidatos,coalitions_tbl)
+
+## leer marco para ver si hay casillas que no estan en el marco 
+# NB esto es marco simulacro 2: se necesita actuaizar con el marco que toque.
+marco_2024_CVE_CASILLA <- readr::read_rds("../data-raw/marco_2024.rds") |>
+  dplyr::mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
+                                stringr::str_pad(SECCION, 4, pad = "0"),
+                                TIPO_CASILLA,
+                                stringr::str_pad(ID_CASILLA, 2, pad = "0"),
+                                stringr::str_pad(EXT_CONTIGUA,2, pad = "0"))) |>
+  dplyr::pull(CLAVE_CASILLA)
+
+## crear folders de output si no existen
+output_path <-"./checks_remesas_output/"
+folders_election <- unique(remesas_tbl$election)
+for(folder in folders_election) { # folder <- folders_election[1]
+  output_dir <- paste0(output_path,folder)
+  if (!dir.exists(output_dir)) {dir.create(output_dir,recursive=TRUE)}
+}
+
+```
+
+```{r,echo=FALSE,message=FALSE}
+read_sum_remesa <- function(row){ # row <-10
+ # print(paste(row,Sys.time(), sep = " ="))
+  
+  file_path <- remesas_tbl$path[row]
+  diputados <- remesas_tbl$elec_edo[row] == "0400"
+  
+  print(paste(file_path))
+  
+  if(diputados) {
+    candidatos_elec <- candidatos_tbl |>
+      filter(ID_ESTADO == 999)
+  } else {
+    ## para presidencial y estados
+    candidatos_elec <- candidatos_tbl  |>
+      filter((ID_ESTADO != 999) & (ID_ESTADO == remesas_tbl$ID_ESTADO[row]))
+  }
+
+  lista_candidatos <- candidatos_elec$CANDIDATO |> unique()
+  lista_coaliciones <- candidatos_elec$PARTIDO |> unique()
+  lista_columnas <- c(lista_coaliciones,lista_candidatos) |> unique()
+
+  
+  data_in <- readr::read_delim(paste(path_cortes,file_path, sep = "/"), "|", escape_double = FALSE,
+                               trim_ws = TRUE, skip = 1,show_col_types = FALSE) |>
+    dplyr::mutate(OTROS = CNR + NULOS) |>
+    dplyr::mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
+                                  stringr::str_pad(SECCION, 4, pad = "0"),
+                                  TIPO_CASILLA,
+                                  stringr::str_pad(ID_CASILLA, 2, pad = "0"),
+                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
+  
+  #check if candidates votes correspond to their alliances sums
+   if(diputados) {
+    votacion_coalicion_check <- data_in |>
+      dplyr::select(CLAVE_CASILLA) |>
+      dplyr::mutate(ch_sums_coa = FALSE) ## could be NA, but giving FALSE . Doesnt apply to diputados. 
+  } else {
+    ## para presidencial y estados
+    votacion_coalicion_check <- data_in |>
+    tidyr::pivot_longer(cols = all_of(lista_coaliciones), names_to = "PARTIDO",
+                        values_to = "votos") |>
+    dplyr::left_join(candidatos_elec |> select(-ID_ESTADO), by = join_by(PARTIDO)) |> 
+    dplyr::group_by(CLAVE_CASILLA, ID_ESTADO, CANDIDATO) |>
+    dplyr::summarise(votos_sum = sum(votos),.groups = "drop") |>
+    dplyr::left_join( data_in |>
+                        dplyr::select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos)) |>
+                        tidyr::pivot_longer(cols = all_of(lista_candidatos), names_to = "CANDIDATO",
+                                            values_to = "votos_reg"),
+                      by = join_by(CLAVE_CASILLA, ID_ESTADO, CANDIDATO)) |>
+    dplyr::mutate(ch_sums_coa = votos_sum != votos_reg) |>
+    dplyr::group_by(CLAVE_CASILLA) |>
+    dplyr::summarise(ch_sums_coa = any(ch_sums_coa))
+  }
+    
+  
+  checks <- data_in |>
+    dplyr::select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_columnas),TOTAL, LISTA_NOMINAL, TIPO_CASILLA) |>
+    dplyr::mutate(ch_cas_out_marco = !(CLAVE_CASILLA %in% marco_2024_CVE_CASILLA)) |>
+    dplyr::mutate(ch_sum_total = rowSums(across(all_of(lista_coaliciones))) != TOTAL)|>
+    dplyr::mutate(ch_sum_zero = rowSums(across(all_of(lista_coaliciones))) == 0)|>
+    # % votos NULOS/TOTAL > 20%
+    dplyr::mutate(ch_nulos_gr20 = (NULOS / TOTAL > 0.2) & (TOTAL > 40))|>
+    # TOTAL > LISTA_NOMINAL excluyendo a casillas especiales con TIPO_CASILLA = "S"
+    dplyr::mutate(ch_total_grln = (TOTAL > LISTA_NOMINAL)&(TIPO_CASILLA != "S"))|>
+    # SUMA de Partidos = TOTAL Candidatos
+    dplyr::left_join(votacion_coalicion_check, by = join_by(CLAVE_CASILLA)) |> # adds ch_sums_coa
+    # any checks
+    dplyr::mutate(ch_any_checks = rowSums(across(all_of(starts_with("ch_")))) > 0)
+    
+  # temp_CVECAS <- checks |> filter(ch_total_ln) |> pull(CLAVE_CASILLA)
+  # data_in |> filter(CLAVE_CASILLA %in% temp_CVECAS) |> view()
+  
+  if(remesas_tbl$last_remesa[row]) {
+    last_remesa_check <- checks |>
+      #dplyr::select(CLAVE_CASILLA,starts_with("ch_")) |>
+      dplyr::filter(ch_any_checks>0) 
+    write_csv(last_remesa_check, file = paste0(output_path,file_path,"_checks.csv"))  
+  }
+  
+  
+  resultados <- tibble(path=file_path)
+  resultados$ncas <- n_distinct(checks$CLAVE_CASILLA)
+  resultados$part_crude <- sum(checks$TOTAL)/sum(checks$LISTA_NOMINAL)
+  resultados$cas_out_marco <- sum(checks$ch_cas_out_marco)
+  resultados$sum_total <- sum(checks$ch_sum_total)
+  resultados$sum_zero <- sum(checks$ch_sum_zero)
+  resultados$nulos_gr20 <- sum(checks$ch_nulos_gr20)
+  resultados$total_grln <- sum(checks$ch_total_grln)
+  resultados$sums_coa <- sum(checks$ch_sums_coa)
+
+  resultados$any_checks <- sum(checks$ch_any_checks)
+  resultados$per_cas_problem <- resultados$any_checks/resultados$ncas
+ 
+  resultados
+}
+```
+
+```{r,echo=FALSE,message=FALSE}
+# read_sum_remesa(1)
+
+out_resultados <- map_df(1:nrow(remesas_tbl), function(rep) {
+  read_sum_remesa(rep)
+  })
+
+remesas_resultados <- remesas_tbl |> 
+  select(path,election,remesa = filename) |>
+  left_join(out_resultados) 
+  
+
+write_csv(remesas_resultados, file = paste0(output_path,trunc(Sys.time(), "secs"),"_checks.csv"))
+```
+
+## Graficas checks total (%)
+```{r}
+
+max_per_cas_problem <- round(max(remesas_resultados$per_cas_problem)+0.01,2)
+
+remesas_resultados |>
+  dplyr::select(-path) |>
+  dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
+  ggplot(aes(x = day_time, y = per_cas_problem, colour = election, group = election)) +
+  geom_line() + geom_point() +
+  ylim(0,max_per_cas_problem)+  
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
+  labs(title=paste("Checks: total por eleccion"))
+
+```
+
+## Graficas checks por eleccion
+```{r}
+
+plot_checks_per <- function(eleccion){
+remesas_resultados |>
+  dplyr::filter(election == eleccion) |>
+  dplyr::select(-path) |>
+  dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
+  #dplyr::slice_tail(n=10) |>
+  tidyr::pivot_longer(cols = cas_out_marco:per_cas_problem, names_to = "checks",
+                        values_to = "value") |>
+  dplyr::filter(checks != "per_cas_problem")|>
+  dplyr::mutate(value = value / ncas) |>
+  ggplot(aes(x = day_time, y = value, colour = checks, group = checks)) +
+  geom_line() + geom_point() +
+  ylim(0,max_per_cas_problem)+  
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
+  labs(title=paste("Checks: ",eleccion))
+}
+
+plot_checks_per("presidente")
+plot_checks_per("mor")
+plot_checks_per("tab")
+plot_checks_per("ver")
+plot_checks_per("diputados")
+
+```
+
+## Tablas ultimas 10 remesas, checks por eleccion
+```{r}
+
+tablas_checks_per <- function(eleccion){
+remesas_resultados |>
+  dplyr::select(-path) |>
+  dplyr::filter(election == eleccion) |>
+  dplyr::mutate(part_crude = scales::percent(part_crude,accuracy = 0.01)) |>
+  dplyr::mutate(per_cas_problem = scales::percent(per_cas_problem,accuracy = 0.01)) |>
+  dplyr::slice_tail(n=10) |>
+  formatear_tabla()
+}
+
+tablas_checks_per("presidente")
+tablas_checks_per("mor")
+tablas_checks_per("tab")
+tablas_checks_per("ver")
+tablas_checks_per("diputados")
+
+```
+## Graficas participacion cruda (%)
+```{r}
+
+remesas_resultados |>
+  dplyr::select(-path) |>
+  dplyr::mutate(day_time = stringr::str_sub(remesa,12,17)) |>
+  ggplot(aes(x = day_time, y = part_crude, colour = election, group = election)) +
+  geom_line() + geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 8))+
+  labs(title=paste("Checks: participacion cruda"))
+
+
+```
+

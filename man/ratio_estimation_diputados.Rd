@@ -11,7 +11,7 @@ ratio_estimation_diputados(
   n_stratum,
   coalitions_tbl,
   assignment_tbl,
-  B = 50,
+  B = 500,
   seed = NA
 )
 }

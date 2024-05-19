@@ -50,20 +50,16 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
     ungroup() %>%
     rename(strata = {{ stratum }})
 
-  # collapse strata if needed
-  if(n_distinct(data_tbl$strata) < n_distinct(data_stratum$strata)) {
-    data_stratum_collapsed <- collapse_strata(data_tbl, data_stratum)
-  } else {
-    data_stratum_collapsed <- data_stratum
-  }
   data_tbl <- data_tbl %>%
-    left_join(data_stratum_collapsed, by = "strata")
+    left_join(data_stratum, by = "strata")
+
   data_long_tbl <- data_tbl %>%
     mutate(internal_id = row_number())  %>%
     group_by(strata) %>%
     mutate(n_h = n()) %>%
     ungroup() %>%
     tidyr::pivot_longer(cols = {{ parties }}, names_to = "party", values_to = "n_votes")
+
   ratios <-  data_long_tbl %>%
     mutate(n_aux = (n_strata / n_h) * n_votes) %>%
     group_by(strata, party) %>%
@@ -98,8 +94,8 @@ ratio_estimation <- function(data_tbl, stratum, data_stratum, n_stratum, parties
 sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
   # B bootstrap replicates
   ratio_reps <- purrr::map(1:B, function(b){
-      sd_ratio_estimation_aux(data_tbl = data_tbl,
-                              data_stratum = data_stratum, parties = {{ parties }})})
+    sd_ratio_estimation_aux(data_tbl = data_tbl,
+                            data_stratum = data_stratum, parties = {{ parties }})})
   std_errors <- bind_rows(ratio_reps) %>%
     group_by(party) %>%
     summarise(std_error = stats::sd(prop), .groups = "drop")
@@ -107,10 +103,19 @@ sd_ratio_estimation <- function(data_tbl, data_stratum, B, parties){
 }
 # auxiliary function, bootstrap samples of the data and computes ratio estimator
 sd_ratio_estimation_aux <- function(data_tbl, data_stratum, parties){
+
+  # collapse strata if any empty
+  if(n_distinct(data_tbl$strata) < n_distinct(data_stratum$strata)) {
+    data_stratum_collapsed <- collapse_strata(data_tbl, data_stratum)
+  } else {
+    data_stratum_collapsed <- data_stratum
+  }
+
   sample_boot <- select_sample_prop(data_tbl, stratum = strata, frac = 1,
                                     replace = TRUE)
   ratio_estimation(data_tbl = sample_boot %>% dplyr::select(-n_strata),
-                   stratum = strata, data_stratum = data_stratum, n_stratum = n_strata,
+                   stratum = strata, data_stratum = data_stratum_collapsed,
+                   n_stratum = n_strata,
                    parties = {{ parties }}, std_errors = FALSE)
 
 }
@@ -298,7 +303,7 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl,
 assign_all_seats <- function(reps_list, assignment_tbl) {
 
   majority_seats_tbl <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
-    party_name = party, candidate_name = candidato)
+                                        party_name = party, candidate_name = candidato)
 
   total_tbl <- add_max_seats(reps_list$total_tbl, majority_seats_tbl)
 
@@ -344,8 +349,8 @@ add_max_seats <- function(total_tbl, majority_seats_tbl) {
     dplyr::mutate(
       #votación nal. emitida
       prop_vot_nal = ifelse(prop < 0.03 |
-                          stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
-                        0, prop),
+                              stringr::str_detect(party, paste(parties_ignore, collapse = "|")),
+                            0, prop),
       prop_vot_nal = prop_vot_nal / sum(prop_vot_nal),
     ) |>
     dplyr::left_join(majority_seats_tbl, by = c("rep" = "rep", "party" = "candidate")) |>
@@ -396,7 +401,7 @@ assign_prop <- function(total_tbl) {
 #' must be named party.
 #' @export
 ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
-                                           coalitions_tbl, assignment_tbl, B = 50,
+                                       coalitions_tbl, assignment_tbl, B = 500,
                                        seed = NA) {
   data_tbl
   estimates <- bootstrap_diputados(data_tbl = data_tbl, stratum = {{stratum}},
@@ -414,11 +419,14 @@ ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum
     ungroup()
 
   assign_seats_rep |>
+    dplyr::filter(party != "NULOS", party != "CNR") %>%
     dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "IND", party)) |>
+    dplyr::group_by(rep) %>%
+    dplyr::mutate(prop = prop / sum(prop)) %>%
     dplyr::group_by(party) |>
     dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
-                                                  inf = ~ quantile(., 0.02),
-                                                  sup = ~ quantile(., 0.98)))) |>
+                                                                inf = ~ quantile(., 0.02),
+                                                                sup = ~ quantile(., 0.98)))) |>
     ungroup() |>
     dplyr::bind_rows(part_tbl)
 
