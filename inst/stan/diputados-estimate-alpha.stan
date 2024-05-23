@@ -16,6 +16,6 @@ model {
     votos[i,] ~ dirichlet_multinomial(alpha[estrato[i]]);
   }
   for(s in 1:n_estratos){
-    alpha[s] ~ exponential(0.25);
+    alpha[s] ~ exponential(0.05);
   }
 }
