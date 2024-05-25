@@ -212,7 +212,7 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
                              n_estratos = 300, estrato = votes_tbl$strata_num)
       path <- system.file("stan", "diputados-estimate-alpha.stan", package = "quickcountmx")
       dm_model <- cmdstanr::cmdstan_model(path)
-      fit <- dm_model$optimize(data = datos_stan_lst, seed = 889)
+      fit <- dm_model$optimize(data = datos_stan_lst, init = 0.01, seed = 889)
       alpha_tbl <- fit$summary(c("alpha")) |> as_tibble() |>
         filter(variable != "lp__") |>
         tidyr::separate(variable, c("variable", "strata_num", "party_num"), sep = "[\\[\\]\\,]", convert = TRUE, extra = "drop") |>
