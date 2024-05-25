@@ -9,6 +9,7 @@ data {
 parameters {
   //matrix[p, n_estratos] alpha;
   array[n_estratos] vector<lower=0>[p] alpha;
+  vector[p] log_lambda_0;
   corr_matrix[J] Omega;
   vector<lower=0>[p] sigma;
 }
