@@ -9,13 +9,14 @@ data {
 parameters {
   //matrix[p, n_estratos] alpha;
   array[n_estratos] vector<lower=0>[p] alpha;
+  array[n_estratos] vector[p] log_lambda;
   vector[p] log_lambda_0;
-  corr_matrix[J] Omega;
+  corr_matrix[p] Omega;
   vector<lower=0>[p] sigma;
 }
 
 transformed parameters {
-  cov_matrix[P] Sigma;
+  cov_matrix[p] Sigma;
 
   Sigma = quad_form_diag(Omega, sigma); 
 }
@@ -25,7 +26,7 @@ model {
     votos[i,] ~ dirichlet_multinomial(alpha[estrato[i]]);
   }
   for(s in 1:n_estratos){
-    alpha[s] ~ exponential(exp(log_lambda[s));
+    alpha[s] ~ exponential(exp(log_lambda[s]));
     log_lambda[s] ~ multi_normal(log_lambda_0, Sigma);
   }
   sigma ~ normal(0, 0.5);
