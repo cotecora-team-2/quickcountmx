@@ -331,6 +331,17 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl,
     rename(party = {{ party_name }}) |>
     rename(candidate = {{ candidate_name }})
 
+
+  parties <- unique(estimates_strata_tbl$party)
+  reps <- n_distinct(estimates_strata_tbl$rep)
+  party_plus<- tibble(rep=1:reps,party_more =sample(parties,reps, replace = TRUE))
+  increase <-0.1
+
+  estimates_strata_tbl <- estimates_strata_tbl |>
+    left_join(party_plus) |>
+    group_by(rep) |>
+    mutate(prop_votes= ifelse(party == party_more,prop_votes*(1+increase),prop_votes))
+
   aggregate_coalitions_tbl <- estimates_strata_tbl |>
     left_join(assignment_tbl, by = c("party", "strata")) |>
     mutate(candidate = ifelse(is.na(candidate), party, candidate)) |>
