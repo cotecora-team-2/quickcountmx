@@ -326,7 +326,7 @@ calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_s
 #'
 #' @export
 assign_majority <- function(estimates_strata_tbl, assignment_tbl,
-                            party_name, candidate_name){
+                            party_name, candidate_name, increment = 0){
   assignment_tbl <- assignment_tbl |>
     rename(party = {{ party_name }}) |>
     rename(candidate = {{ candidate_name }})
@@ -335,7 +335,7 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl,
   parties <- unique(estimates_strata_tbl$party)
   reps <- n_distinct(estimates_strata_tbl$rep)
   party_plus<- tibble(rep=1:reps,party_more =sample(parties,reps, replace = TRUE))
-  increase <-0.1
+  increase <- increment
 
   estimates_strata_tbl <- estimates_strata_tbl |>
     left_join(party_plus) |>
@@ -365,10 +365,11 @@ assign_majority <- function(estimates_strata_tbl, assignment_tbl,
 #' `n_seats_total` integer, is the total number of seats, out of the 500, for each of the parties;
 #'
 #' @export
-assign_all_seats <- function(reps_list, assignment_tbl) {
+assign_all_seats <- function(reps_list, assignment_tbl, increment =0) {
 
   majority_seats_tbl <- assign_majority(reps_list$strata_tbl, assignment_tbl ,
-                                        party_name = party, candidate_name = candidato)
+                                        party_name = party, candidate_name = candidato,
+                                        increment = increment)
 
   total_tbl <- add_max_seats(reps_list$total_tbl, majority_seats_tbl)
 
