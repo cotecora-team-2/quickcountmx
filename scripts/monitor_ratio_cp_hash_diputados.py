@@ -63,6 +63,7 @@ def main(params):
       print("Se agregaron: ", ",".join(added))
       # use last one
       added = added[-1:]
+      time.sleep(4)
       for filename in added:
         descriptores = procesar_nombre(filename)
         print(descriptores)
