@@ -115,10 +115,11 @@ ratio_diputados_process_batch <- function(path_name, file_name, path_out, path_m
   # run model ###################
   fit_time <- system.time(
     estimates <- ratio_estimation_diputados(data_in, stratum = strata,
-                                         stratum_tbl = stratum_tbl, n_stratum = N_estrato,
-                                         coalitions_tbl = coalitions_tbl,
-                                         assignment_tbl = assignment_tbl,
-                                         B = as.numeric(B))
+                                            stratum_tbl = stratum_tbl, n_stratum = N_estrato,
+                                            coalitions_tbl = coalitions_tbl,
+                                            assignment_tbl = assignment_tbl,
+                                            B = as.numeric(B),
+                                            parametric = TRUE)
   )
   print(fit_time)
   print(estimates)

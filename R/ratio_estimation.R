@@ -156,13 +156,15 @@ collapse_strata <- function(data_tbl, data_stratum){
 #' generator (optional).
 #' @param samples_table logical indicating if the function should return the samples
 #' as a list of tibbles for bootstrap samples
+#' @param parametric logical indicating if parametric bootstrap should be used. By default
+#' is false, indicating non-parametric bootstrap.
 #' @return A \code{list} including two componentes: point estimates at national level
 #' and at stratum level, and bootstrap replications of these quantities.
 #' @importFrom dplyr %>%
 #' @importFrom rlang :=
 #' @export
 bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
-                                coalitions_tbl, B = 50, seed = NA, samples_table = FALSE){
+                                coalitions_tbl, B = 50, seed = NA, samples_table = FALSE, parametric = FALSE){
 
   stratum_tbl <- stratum_tbl |>
     rename(strata = {{ stratum }}, n_strata = {{ n_stratum }})
@@ -197,6 +199,29 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
     sample_ids <- distinct(data_parties_long_tbl, internal_id, strata) |>
       group_by(strata)
     set.seed(seed)
+    alpha_tbl <- NULL
+    if(parametric){
+      votes_tbl <- tidyr::pivot_wider(data_parties_long_tbl |> select( -LISTA_NOMINAL) |>
+                                 mutate(strata_num = as.numeric(factor(strata)))
+                                 , names_from = party, values_from = n_votes)
+      votes_mat <- votes_tbl |> select(parties_chr) |> as.matrix()
+      colnames_parties <- colnames(votes_mat)
+      parties_tbl <- tibble(party = colnames_parties, party_num = 1:length(colnames_parties))
+      datos_stan_lst <- list(n = nrow(votes_mat), p = length(colnames_parties),
+                             votos = votes_mat,
+                             n_estratos = 300, estrato = votes_tbl$strata_num)
+      path <- system.file("stan", "diputados-estimate-alpha.stan", package = "quickcountmx")
+      dm_model <- cmdstanr::cmdstan_model(path)
+      fit <- dm_model$optimize(data = datos_stan_lst, seed = 889)
+      alpha_tbl <- fit$summary(c("alpha")) |> as_tibble() |>
+        filter(variable != "lp__") |>
+        tidyr::separate(variable, c("variable", "strata_num", "party_num"), sep = "[\\[\\]\\,]", convert = TRUE, extra = "drop") |>
+        select(-variable) |>
+        left_join(votes_tbl |> distinct(strata, strata_num), by = "strata_num") |>
+        left_join(parties_tbl, by = "party_num") |>
+        filter(!is.na(strata))
+    }
+
     bootstrap_reps <- purrr::map(1:B, function(b){
       sample_ids_bootstrap <- slice_sample(sample_ids, prop = 1.0, replace = TRUE) |>
         ungroup() |>
@@ -206,7 +231,7 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
         ungroup() |>
         select(-internal_id)
       calculate_diputados(data_parties_long_tbl_bootstrap, stratum, stratum_tbl, n_stratum,
-                          coalitions_tbl, parties_chr)
+                          coalitions_tbl, parties_chr, alpha_tbl = alpha_tbl)
     })
   }
   output <- list(point_estimate = point_estimate, bootstrap_reps = bootstrap_reps)
@@ -218,25 +243,54 @@ bootstrap_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
   return(output)
 }
 
+rdirichlet <- function(n=1,alpha){
+  Gam <- matrix(0,n,length(alpha))
+  for(i in 1:length(alpha)) Gam[,i] <- rgamma(n,shape=alpha[i])
+  Gam/rowSums(Gam)
+}
 
 calculate_diputados <- function(data_parties_long_tbl, stratum, stratum_tbl, n_stratum,
-                                coalitions_tbl, parties_chr){
+                                coalitions_tbl, parties_chr, alpha_tbl = NULL){
 
   data_parties_tbl <- data_parties_long_tbl |>
     tidyr::pivot_wider(names_from = party, values_from = n_votes, values_fill = 0)
 
+  votes_ignore <- c("CNR", "NULOS")
   ratio <- ratio_estimation(data_parties_tbl, strata, stratum_tbl,
                             n_stratum = n_strata,
                             parties = tidyr::all_of(parties_chr), B=0, std_errors = FALSE) |>
-    mutate(prop = prop / 100)
+    mutate(prop = prop / 100) %>%
+    filter(!(party %in% votes_ignore)) %>%
+    mutate(prop = ifelse(party == "part", prop, prop / sum(prop * (party != "part"))))
 
-  estimates_strata_tbl <- data_parties_long_tbl |>
-    group_by(strata, party) |>
-    summarise(total_votes = sum(n_votes), .groups = "drop_last") |>
-    mutate(prop_votes = total_votes / sum(total_votes)) |>
-    ungroup()
 
-  list(estimates_total = ratio, estimates_strata = estimates_strata_tbl)
+  if(!is.null(alpha_tbl)){
+    num_stations_tbl <- data_parties_long_tbl |>
+      group_by(internal_id_bs, strata) |>
+      summarise(total_votes = sum(n_votes), .groups = "drop") |>
+      group_by(strata) |>
+      summarise(total_votes = list(total_votes), .groups = "drop")
+    estimates_strata_tbl <- alpha_tbl |> left_join(num_stations_tbl, by = "strata") |>
+      dplyr::group_split(strata) |>
+      purrr::map(function(strata_tbl){
+        num_votes <- strata_tbl$total_votes[[1]]
+        sim_votes <- purrr::map(num_votes, ~rmultinom(1, .x, as.numeric(rdirichlet(1, strata_tbl$estimate)))) |>
+          purrr::reduce(`+`)
+        strata_tbl$prop_votes <- as.numeric(sim_votes) / sum(sim_votes)
+        strata_tbl
+      }) |> bind_rows() |>
+      select(-strata_num, -party_num, -estimate, -total_votes)
+  } else {
+    estimates_strata_tbl <- data_parties_long_tbl |>
+      group_by(strata, party) |>
+      summarise(total_votes = sum(n_votes), .groups = "drop_last") |>
+      mutate(prop_votes = total_votes / sum(total_votes)) |>
+      ungroup()
+  }
+
+
+  list(estimates_total = ratio,
+       estimates_strata = estimates_strata_tbl %>% filter(!party %in% votes_ignore))
 }
 
 #' @name assign_deputy_seats
@@ -402,12 +456,11 @@ assign_prop <- function(total_tbl) {
 #' @export
 ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum,
                                        coalitions_tbl, assignment_tbl, B = 500,
-                                       seed = NA) {
-  data_tbl
+                                       seed = NA, parametric = FALSE) {
   estimates <- bootstrap_diputados(data_tbl = data_tbl, stratum = {{stratum}},
                                    stratum_tbl = stratum_tbl, n_stratum = {{n_stratum}},
                                    coalitions_tbl = coalitions_tbl,
-                                   B = B, seed = seed, samples_table = TRUE)
+                                   B = B, seed = seed, samples_table = TRUE, parametric = parametric)
 
   assign_seats_rep <- assign_all_seats(estimates, assignment_tbl)
   part_tbl <- estimates$total_tbl |>
@@ -421,9 +474,11 @@ ratio_estimation_diputados <- function(data_tbl, stratum, stratum_tbl, n_stratum
   assign_seats_rep |>
     dplyr::filter(party != "NULOS", party != "CNR") %>%
     dplyr::mutate(party = ifelse(stringr::str_detect(party, "^CI"), "IND", party)) |>
-    dplyr::group_by(rep) %>%
-    dplyr::mutate(prop = prop / sum(prop)) %>%
-    dplyr::group_by(party) |>
+    dplyr::group_by(party, rep) %>%
+    dplyr::summarise(prop = sum(prop),
+                     n_seats_total = sum(n_seats_total),
+                     .groups = "drop_last") %>%
+    dplyr::group_by(party) %>%
     dplyr::summarise(dplyr::across(c(prop, n_seats_total), list(median = median,
                                                                 inf = ~ quantile(., 0.02),
                                                                 sup = ~ quantile(., 0.98)))) |>

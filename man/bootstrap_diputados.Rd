@@ -12,7 +12,8 @@ bootstrap_diputados(
   coalitions_tbl,
   B = 50,
   seed = NA,
-  samples_table = FALSE
+  samples_table = FALSE,
+  parametric = FALSE
 )
 }
 \arguments{
@@ -37,6 +38,9 @@ generator (optional).}
 
 \item{samples_table}{logical indicating if the function should return the samples
 as a list of tibbles for bootstrap samples}
+
+\item{parametric}{logical indicating if parametric bootstrap should be used. By default
+is false, indicating non-parametric bootstrap.}
 }
 \value{
 A \code{list} including two componentes: point estimates at national level
