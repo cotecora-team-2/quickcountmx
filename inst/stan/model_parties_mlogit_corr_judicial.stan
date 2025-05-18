@@ -195,7 +195,7 @@ generated quantities {
          temp_y_out[k] = neg_binomial_2_rng(alpha_bn_f[k], alpha_bn_f[k] / kappa[stratum_f[i], k]);
       }
       //total_out = total_out + n_f[i] * theta_f_total_prop[i];
-      total_out = total_out + temp_y_out[1] ;
+      total_out = total_out + alpha_bn_f[1];
 
     }
   real sum_temp_y_out = sum(temp_y_out);
