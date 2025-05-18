@@ -8,10 +8,10 @@ test_tbl <- dplyr::tibble(
   ln = rep(50, 29),
   x1 = rnorm(29), x_2 = rnorm(29),
   cand_1 = rep(5, 29), cand_2 = rep(10, 29), otro = rep(1, 29)
-) %>% dplyr::mutate(total = cand_1 + cand_2 + otro)
+) |> dplyr::mutate(total = cand_1 + cand_2 + otro)
 
-data_stratum <- test_tbl %>%
-  dplyr::group_by(state) %>%
+data_stratum <- test_tbl |>
+  dplyr::group_by(state) |>
   dplyr::count()
 
 test_that("create data", {
@@ -74,4 +74,20 @@ test_that("test call inv metric", {
   expect_is(estimates, "tbl")
   expect_equal(nrow(estimates), 4)
   expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
+})
+
+test_that("test call judicial", {
+  sample_tbl <-
+    select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
+  fit <- hb_estimation(sample_tbl, stratum = state,
+                       sampling_frame = test_tbl,
+                       prop_obs = 0.9, seed = 12,
+                       model = "part-judicial",
+                       parties = cand_1:cand_1, covariates = x1:x_2,
+                       num_iter = 200, chains = 1)
+  estimates <- fit$estimates
+  print(estimates)
+  expect_is(estimates, "tbl")
+  expect_equal(nrow(estimates), 2)
+  expect_lt(mean(abs(estimates$median - c(1/10, 1/10))), 0.05)
 })
