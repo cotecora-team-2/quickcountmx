@@ -30,7 +30,8 @@ Imports:
     stringr,
     readr,
     logger,
-    magrittr
+    magrittr,
+    kableExtra
 Remotes:
     github::stan-dev/cmdstanr
 VignetteBuilder: knitr

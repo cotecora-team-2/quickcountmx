@@ -1,0 +1,238 @@
+---
+title: "Monitor de remesas"
+output: html_document
+lang: es
+format: 
+  html:
+    embed-resources: true
+---
+
+```{r, echo=FALSE,message=FALSE}
+library(tidyverse)
+library(kableExtra)
+```
+
+```{r, echo=FALSE,message=FALSE}
+#path_estimaciones <- "/home/rstudio/cotecora/estimaciones/"
+path_estimaciones <- "/Users/michelleanzarut/Library/CloudStorage/Dropbox/INE/INE_Mich_2023/noche_eleccion/buzon"
+estimaciones_files <- list.files(paste0(path_estimaciones,"/coah"), full.names = TRUE,
+                                 recursive = TRUE, include.dirs = FALSE, 
+                                 pattern = "*csv")
+#modelos <- c("hb","compulsado","razon")
+modelos <- c("ortiz","compulsado","romero")
+ultimo_corte_files <- list.files(paste0(path_estimaciones,"/cortes"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
+```
+
+Analizamos datos del último corte:
+
+```{r, echo=FALSE,message=FALSE, include = TRUE}
+#path_cortes <- "/home/rstudio/cotecora/cortes/"
+path_cortes <- "/Users/michelleanzarut/Library/CloudStorage/Dropbox/INE/INE_Mich_2023/noche_eleccion/cortes"
+
+cortes_files <- list.files(
+  paste0(path_cortes, "/coah"), 
+  full.names = TRUE,
+  recursive = TRUE,
+  include.dirs = FALSE, 
+  pattern = "REMESAS.*\\.txt$"
+)
+
+corte_mas_reciente_file <- cortes_files[which.max(file.info(cortes_files)$mtime)]
+corte_mas_reciente_file
+```
+
+```{r, echo=FALSE,message=FALSE}
+corte_mas_reciente <- read.table(corte_mas_reciente_file, 
+                                 header = TRUE, 
+                                 sep = "|",
+                                 stringsAsFactors = FALSE, 
+                                 skip = 1) |>
+  select(c("ID_CASILLA", "ID_ESTADO", 
+    "ID_DISTRITO_FEDERAL", 
+    "SECCION", 
+    "TIPO_CASILLA", 
+    "EXT_CONTIGUA", 
+    "TIPO_SECCION", 
+    "LISTA_NOMINAL", 
+    "ID_MUNICIPIO", 
+    "ESTRATO", 
+    "NUMERO_ARE",
+    "TOTAL",
+    "ORIGEN_CAPTURA",
+    "MODIFICADO"))
+```
+
+OJO: aqui falta leer el marco y pegarselo a los datos de ultimo corte
+
+OJO: aqui falta meter los datos de muestra esperada de 2025  
+
+```{r, echo=FALSE,message=FALSE}
+asignacion <- read_csv("../data-raw/asignacion_estratos_2025.csv")
+```
+
+```{r, echo=FALSE,message=FALSE, include = TRUE}
+tabla_muestra <- corte_mas_reciente |>
+  group_by(ID_ESTADO, ID_DISTRITO_FEDERAL, ESTRATO) |>
+  summarise(
+    muestra_recibida = n(),
+    .groups = "drop"
+  ) |>
+  mutate(muestra_esperada = 40) |>
+  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL, ESTRATO) |>
+  select(ID_ESTADO, ID_DISTRITO_FEDERAL, ESTRATO, muestra_esperada, muestra_recibida)
+
+# Primero genera la columna con colores
+colores <- tabla_muestra |> 
+  mutate(color = case_when(
+    muestra_recibida < 10 ~ "red",
+    muestra_recibida > 25 ~ "green",
+    TRUE ~ "black"
+  )) |> 
+  pull(color)
+
+# Ahora genera la tabla usando esos colores
+tabla_muestra |>  
+  kable(
+    col.names = c("Estado", "DF", "Estrato", "Muestra esperada", "Muestra recibida"),
+    booktabs = TRUE
+  ) |>
+  kable_styling() |>
+  column_spec(5, color = colores)
+```
+
+```{r, echo=FALSE,message=FALSE}
+corte_mas_reciente |>
+  arrange(TOTAL) |>
+  mutate(orden = row_number()) |>
+  ggplot(aes(x = orden, y = TOTAL)) +
+  geom_point(alpha = 0.7, size = 2, color = "#2C7BB6") +
+  labs(title = "Distribución ordenada de los votos totales por casilla",
+       x = "Casillas ordenadas",
+       y = "Votos totales") +
+  theme_minimal()
+```
+
+```{r, echo=FALSE,message=FALSE}
+corte_mas_reciente |>
+  mutate(participacion = 100 * TOTAL / LISTA_NOMINAL) |>
+  arrange(participacion) |>
+  mutate(orden = row_number()) |>
+  ggplot(aes(x = orden, y = participacion)) +
+  geom_point(alpha = 0.7, size = 2, color = "darkgray") +
+  labs(title = "Distribución ordenada de porcentajes de participación por casilla",
+       x = "Casillas ordenadas",
+       y = "Participación (%)") +
+  theme_minimal()
+```
+
+```{r, echo=FALSE, include = FALSE, message = FALSE}
+revisar_anomalias <- function(datos, umbral_participacion = 50) {
+  datos <- datos |> 
+    mutate(ln = ifelse(TIPO_CASILLA == "S" & LISTA_NOMINAL == 0, 
+                       1000, LISTA_NOMINAL)) |>
+    mutate(participacion = 100 * TOTAL / ln)
+  
+  anomalias <- datos |>
+    filter(participacion > umbral_participacion) |>
+    arrange(desc(participacion))
+  
+  if (nrow(anomalias) > 0) {
+    message("⚠️ Casillas atípicas detectadas con participación superior a ", umbral_participacion, "%:")
+    print(anomalias |> kableExtra::kable())
+  } else {
+    message("✅ No se encontraron casillas atípicas con participación superior a ", umbral_participacion, "%.")
+  }
+  return()
+}
+```
+
+```{r, echo=FALSE, include = TRUE}
+anomalias_detectadas <- revisar_anomalias(corte_mas_reciente, 75)
+anomalias_detectadas
+```
+
+# Estimaciones de participación
+
+```{r, echo=FALSE,message=FALSE, include = TRUE}
+get_df <- function(modelo, estimaciones_files){
+  get_fdate <- function(x){
+    x <- as.character(x)
+    nx <- as.POSIXct(paste0(
+      substr(x,1,2)," ",substr(x,3,4),":",substr(x,5,6)),format = "%d %H:%M"
+      )
+  }
+  files_modelo <- estimaciones_files[grepl(modelo, estimaciones_files, fixed = TRUE)]
+  estimaciones_modelo <- files_modelo |>
+    map_df(~ read_csv(.x) |> mutate(method = modelo)) |>
+    select("PART", "LMU", method, R) |>
+    mutate(fecha = R) |>
+    mutate_at(vars(fecha), get_fdate) |>
+    group_by(method) |>
+      mutate(LMU = dplyr::case_when(
+      LMU == 0 ~ "inf",
+      LMU == 1 ~ "median",
+      LMU == 2 ~ "sup")) |>
+      tidyr::pivot_wider(names_from = LMU, values_from = "PART") 
+    estimaciones_modelo
+}
+
+estimaciones_hb <- get_df("ortiz", estimaciones_files)
+estimaciones_razon <- get_df("romero", estimaciones_files)
+estimaciones_compulsado <- get_df("compulsado", estimaciones_files)
+
+estimaciones_tbl <- rbind(estimaciones_hb, estimaciones_razon, estimaciones_compulsado)
+```
+
+```{r , echo=FALSE, fig.width = 8, include = TRUE}
+ggplot(estimaciones_tbl, aes(x = fecha, y = median, color = method, fill = method)) +
+  geom_line(linewidth = 1) +
+  geom_ribbon(aes(ymin = inf, ymax = sup), alpha = 0.2, color = NA) +
+  facet_wrap(~ method) +
+  labs(
+    x = "Hora",
+    y = "Porcentaje",
+    color = "Método",
+    fill = "Método"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    strip.background = element_rect(fill = "gray90"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+¿Qué estados aún no tienen datos?
+
+```{r, echo=FALSE,message=FALSE}
+tab_estados_df_dje <- read_csv("../data-raw/tab_estado_df_dje.csv")
+tab_estados_df_dje |>
+  anti_join(corte_mas_reciente |> distinct(ID_ESTADO), by = "ID_ESTADO") |>
+  distinct(ID_ESTADO) |>
+  arrange(ID_ESTADO) |>
+  kable()
+```
+
+¿Qué DF aún no tienen datos?
+
+```{r, echo=FALSE,message=FALSE}
+tab_estados_df_dje |>
+  anti_join(corte_mas_reciente |> distinct(ID_ESTADO, ID_DISTRITO_FEDERAL),
+            by = c("ID_ESTADO", "ID_DISTRITO_FEDERAL")) |>
+  distinct(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
+  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
+  kable()
+```
+¿Qué DJE aún no tienen datos?
+
+```{r, echo=FALSE,message=FALSE}
+tab_estados_df_dje |>
+  anti_join(corte_mas_reciente |> distinct(ID_ESTADO, ID_DISTRITO_FEDERAL),
+            by = c("ID_ESTADO", "ID_DISTRITO_FEDERAL")) |>
+  distinct(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
+  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
+  kable()
+```
+
+
+
