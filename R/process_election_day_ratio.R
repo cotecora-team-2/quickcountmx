@@ -84,6 +84,12 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
 #                                  stringr::str_pad(ID_CASILLA, 2, pad = "0"),
 #                                  stringr::str_pad(EXT_CONTIGUA,2,pad="0"))) #%>%
     #filter(TOTAL > 0)
+
+  ######## Leer y filtrar muestra ###########################
+  muestra_seleccionada <- readr::read_rds("data-raw/muestra_2025.rds")
+  data_in <- data_in |> semi_join(muestra_seleccionada)
+  #####################################################
+
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
   # do processing ########
