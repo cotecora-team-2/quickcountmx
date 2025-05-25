@@ -88,16 +88,19 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   tipo <- stringr::str_sub(file_name, 8, 9)
   estado_str <- stringr::str_sub(file_name, 10, 11)
 
-  table_frame <- readr::read_rds("data-raw/marco_2024.rds")
+  table_frame <- readr::read_rds("data-raw/marco_2025.rds")
   table_frame <- table_frame |>
     ungroup() |>
     mutate(ln = LISTA_NOMINAL) |>
-    mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
+    mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA)) |>
+    mutate(no_casilla = 1:n()) |>
+    mutate(seccion_urbana = 0)
+
   if(estado_str != "00"){
     table_frame <- table_frame |>  filter(ID_ESTADO == as.numeric(estado_str))
   }
 
-  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2024.csv")
+  candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2025.csv")
 
 
   candidatos <- candidatos  |>
@@ -106,54 +109,55 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
-                               trim_ws = TRUE, skip = 1) %>%
+                               trim_ws = TRUE, skip = 1) # %>%
     #    rename(ID_ESTADO = iD_ESTADO) %>% #cambia nombre de columna iD_ESTADO a mayusculas
-    mutate(OTROS = CNR + NULOS) %>%
-    mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
-                                  stringr::str_pad(SECCION, 4, pad = "0"),
-                                  TIPO_CASILLA,
-                                  stringr::str_pad(ID_CASILLA, 2, pad = "0"),
-                                  stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
+    #mutate(OTROS = CNR + NULOS) %>%
+    #mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
+    #                              stringr::str_pad(SECCION, 4, pad = "0"),
+    #                              TIPO_CASILLA,
+    #                              stringr::str_pad(ID_CASILLA, 2, pad = "0"),
+    #                              stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
   logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
 
   #check if candidates votes correspond to their alliances sums
   lista_coaliciones <- candidatos$PARTIDO %>% unique()
-  votacion_larga <- data_in %>%
-    tidyr::pivot_longer(cols = all_of(lista_coaliciones), names_to = "PARTIDO",
-                        values_to = "votos")
-  votacion <- votacion_larga %>%
-    left_join(candidatos %>% select(-ID_ESTADO)) %>%
-    group_by(CLAVE_CASILLA, ID_ESTADO, CANDIDATO) %>%
-    summarise(votos = sum(votos)) %>%
-    tidyr::pivot_wider(names_from = CANDIDATO, values_from = votos)
+  #votacion_larga <- data_in %>%
+  #  tidyr::pivot_longer(cols = all_of(lista_coaliciones), names_to = "PARTIDO",
+  #                      values_to = "votos")
+  #votacion <- votacion_larga %>%
+  #  left_join(candidatos %>% select(-ID_ESTADO)) %>%
+  #  group_by(CLAVE_CASILLA, ID_ESTADO, CANDIDATO) %>%
+  #  summarise(votos = sum(votos)) %>%
+  #  tidyr::pivot_wider(names_from = CANDIDATO, values_from = votos)
 
-  rm(votacion_larga)
+  #rm(votacion_larga)
   rm(lista_coaliciones)
-  tmp_data_in <- data_in %>%
-    select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos))
-  tmp_data_in <- tmp_data_in[order(data_in$CLAVE_CASILLA),]
+  #tmp_data_in <- data_in %>%
+  #  select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos))
+  #tmp_data_in <- tmp_data_in[order(data_in$CLAVE_CASILLA),]
 
-  tmp_votacion <- votacion %>%
-    select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos))
-  tmp_votacion <- tmp_votacion[order(votacion$CLAVE_CASILLA),]
-  print(all(tmp_data_in == tmp_votacion))
-  if(!all(tmp_data_in == tmp_votacion)){
-    erroneos <- data.frame(cand_id = which(tmp_data_in != tmp_votacion, arr.ind=TRUE)[,2] %>% as.numeric())
-    erroneos <- erroneos %>% group_by(cand_id) %>% summarise(c = n())
-    erroneos <- erroneos %>%
-      mutate_at(vars(cand_id), ~ names(tmp_data_in)[.x])
-    print(erroneos)
-    for(ro in 1:nrow(erroneos)) {print(paste0("candidato erroneo: ",erroneos[ro,1]))}
-    for(ro in 1:nrow(erroneos)) {logger::log_error('La suma del candidato {logger::colorize_by_log_level(erroneos[ro,1], logger::ERROR)} esta incorrecta en {logger::colorize_by_log_level(erroneos[ro,2], logger::ERROR)} casillas!')}
-  }
-  rm(votacion)
-  rm(tmp_votacion)
-  rm(tmp_data_in)
+  #tmp_votacion <- votacion %>%
+  #  select(CLAVE_CASILLA, ID_ESTADO,all_of(lista_candidatos))
+  #tmp_votacion <- tmp_votacion[order(votacion$CLAVE_CASILLA),]
+  #print(all(tmp_data_in == tmp_votacion))
+  #if(!all(tmp_data_in == tmp_votacion)){
+  #  erroneos <- data.frame(cand_id = which(tmp_data_in != tmp_votacion, arr.ind=TRUE)[,2] %>% as.numeric())
+  #  erroneos <- erroneos %>% group_by(cand_id) %>% summarise(c = n())
+  #  erroneos <- erroneos %>%
+  #    mutate_at(vars(cand_id), ~ names(tmp_data_in)[.x])
+  #  print(erroneos)
+  #  for(ro in 1:nrow(erroneos)) {print(paste0("candidato erroneo: ",erroneos[ro,1]))}
+  #  for(ro in 1:nrow(erroneos)) {logger::log_error('La suma del candidato {logger::colorize_by_log_level(erroneos[ro,1], logger::ERROR)} esta incorrecta en {logger::colorize_by_log_level(erroneos[ro,2], logger::ERROR)} casillas!')}
+  #}
+  #rm(votacion)
+  #rm(tmp_votacion)
+  #rm(tmp_data_in)
 
   # do processing ########
-  muestra_m <- left_join(data_in, table_frame, by=c("CLAVE_CASILLA")) %>%
+  muestra_m <- left_join(data_in |> select(CLAVE_CASILLA, all_of(lista_candidatos)),
+                         table_frame, by=c("CLAVE_CASILLA")) %>%
     mutate(estrato = as.character(estrato))
   #data_stratum_tbl <- table_frame %>%
   #  filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
@@ -184,7 +188,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     fit <- hb_estimation(muestra_m, stratum = estrato, id_station = no_casilla,
                          sampling_frame = table_frame,
                          parties = all_of(lista_candidatos), prop_obs = prop_obs,
-                         model = "mlogit",
+                         model = "part-judicial",
                          covariates = all_of(c("seccion_urbana")), num_iter = as.numeric(n_iter),
                          nominal_max = as.numeric(nominal_max),
                          chains = as.numeric(n_chains), seed = as.numeric(seed),
