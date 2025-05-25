@@ -93,8 +93,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     ungroup() |>
     mutate(ln = LISTA_NOMINAL) |>
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA)) |>
-    mutate(no_casilla = 1:n()) |>
-    mutate(seccion_urbana = 0)
+    mutate(no_casilla = 1:n())
 
   if(estado_str != "00"){
     table_frame <- table_frame |>  filter(ID_ESTADO == as.numeric(estado_str))
