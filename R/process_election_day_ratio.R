@@ -75,7 +75,7 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
   data_in <- readr::read_delim(path_name, "|", escape_double = FALSE,
-                               trim_ws = TRUE, skip = 1) # %>%
+                               trim_ws = TRUE)# , skip = 1)  %>%
 #    mutate(ID_ESTADO = iD_ESTADO) %>%
 #    mutate(OTROS = CNR + NULOS) %>%
 #    mutate(CLAVE_CASILLA = paste0(stringr::str_pad(ID_ESTADO, 2, pad = "0"),
