@@ -86,7 +86,8 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
     #filter(TOTAL > 0)
 
   ######## Leer y filtrar muestra ###########################
-  muestra_seleccionada <- readr::read_rds("data-raw/muestra_2025.rds")
+  muestra_seleccionada <- readr::read_rds("data-raw/muestra_2025.rds") |>
+    mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
   data_in <- data_in |> semi_join(muestra_seleccionada)
   #####################################################
 
