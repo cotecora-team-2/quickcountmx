@@ -14,23 +14,21 @@ library(kableExtra)
 
 ```{r, echo=FALSE,message=FALSE}
 #path_estimaciones <- "/home/rstudio/cotecora/estimaciones/"
-path_estimaciones <- "/Users/michelleanzarut/Library/CloudStorage/Dropbox/INE/INE_Mich_2023/noche_eleccion/buzon"
-estimaciones_files <- list.files(paste0(path_estimaciones,"/coah"), full.names = TRUE,
+path_estimaciones <- "~/Documents/pruebas-script"
+estimaciones_files <- list.files(path_estimaciones, full.names = TRUE,
                                  recursive = TRUE, include.dirs = FALSE, 
                                  pattern = "*csv")
-#modelos <- c("hb","compulsado","razon")
-modelos <- c("ortiz","compulsado","romero")
-ultimo_corte_files <- list.files(paste0(path_estimaciones,"/cortes"), full.names = TRUE, recursive = TRUE, include.dirs = FALSE, pattern = "*csv")
+modelos <- c("hb","compulsado","razon")
 ```
 
 Analizamos datos del último corte:
 
 ```{r, echo=FALSE,message=FALSE, include = TRUE}
 #path_cortes <- "/home/rstudio/cotecora/cortes/"
-path_cortes <- "/Users/michelleanzarut/Library/CloudStorage/Dropbox/INE/INE_Mich_2023/noche_eleccion/cortes"
+path_cortes <- "../../2025/simulacros-2025/simulacro-1"
 
 cortes_files <- list.files(
-  paste0(path_cortes, "/coah"), 
+  path_cortes, 
   full.names = TRUE,
   recursive = TRUE,
   include.dirs = FALSE, 
@@ -45,47 +43,46 @@ corte_mas_reciente_file
 corte_mas_reciente <- read.table(corte_mas_reciente_file, 
                                  header = TRUE, 
                                  sep = "|",
-                                 stringsAsFactors = FALSE, 
-                                 skip = 1) |>
-  select(c("ID_CASILLA", "ID_ESTADO", 
+                                 stringsAsFactors = FALSE) |>
+  select(c("CLAVE_CASILLA", "ID_ESTADO", 
     "ID_DISTRITO_FEDERAL", 
-    "SECCION", 
-    "TIPO_CASILLA", 
-    "EXT_CONTIGUA", 
-    "TIPO_SECCION", 
-    "LISTA_NOMINAL", 
-    "ID_MUNICIPIO", 
-    "ESTRATO", 
-    "NUMERO_ARE",
-    "TOTAL",
-    "ORIGEN_CAPTURA",
-    "MODIFICADO"))
+    "PERSONAS_VOTANTES",
+    "FECHA_HORA")) 
+# añadir "NUMERO_ARE",
+
 ```
 
-OJO: aqui falta leer el marco y pegarselo a los datos de ultimo corte
+```{r, echo=FALSE,message=FALSE}
+marco_2025 <- readRDS("../data-raw/marco_2025.rds") |>
+  select(-FECHA_HORA) |>
+  mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
 
-OJO: aqui falta meter los datos de muestra esperada de 2025  
+corte_mas_reciente <- corte_mas_reciente |>
+  left_join(marco_2025, by = c("CLAVE_CASILLA", "ID_ESTADO",
+                               "ID_DISTRITO_FEDERAL")) 
+```
 
 ```{r, echo=FALSE,message=FALSE}
-asignacion <- read_csv("../data-raw/asignacion_estratos_2025.csv")
+asignacion <- read_csv("../data-raw/asignacion_estratos_2025.csv") |>
+  rename(muestra_esperada = n, estrato = id_dje)
 ```
 
 ```{r, echo=FALSE,message=FALSE, include = TRUE}
 tabla_muestra <- corte_mas_reciente |>
-  group_by(ID_ESTADO, ID_DISTRITO_FEDERAL, ESTRATO) |>
+  group_by(ID_ESTADO, estrato) |>
   summarise(
     muestra_recibida = n(),
     .groups = "drop"
   ) |>
-  mutate(muestra_esperada = 40) |>
-  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL, ESTRATO) |>
-  select(ID_ESTADO, ID_DISTRITO_FEDERAL, ESTRATO, muestra_esperada, muestra_recibida)
+  left_join(asignacion, by = "estrato") |>
+  arrange(ID_ESTADO, estrato) |>
+  select(ID_ESTADO, estrato, muestra_esperada, muestra_recibida)
 
 # Primero genera la columna con colores
 colores <- tabla_muestra |> 
   mutate(color = case_when(
     muestra_recibida < 10 ~ "red",
-    muestra_recibida > 25 ~ "green",
+    muestra_recibida >= floor(muestra_esperada * 0.9) ~ "green",
     TRUE ~ "black"
   )) |> 
   pull(color)
@@ -93,18 +90,18 @@ colores <- tabla_muestra |>
 # Ahora genera la tabla usando esos colores
 tabla_muestra |>  
   kable(
-    col.names = c("Estado", "DF", "Estrato", "Muestra esperada", "Muestra recibida"),
+    col.names = c("Estado", "Estrato", "Muestra esperada", "Muestra recibida"),
     booktabs = TRUE
   ) |>
   kable_styling() |>
-  column_spec(5, color = colores)
+  column_spec(4, color = colores)
 ```
 
 ```{r, echo=FALSE,message=FALSE}
 corte_mas_reciente |>
-  arrange(TOTAL) |>
+  arrange(PERSONAS_VOTANTES) |>
   mutate(orden = row_number()) |>
-  ggplot(aes(x = orden, y = TOTAL)) +
+  ggplot(aes(x = orden, y = PERSONAS_VOTANTES)) +
   geom_point(alpha = 0.7, size = 2, color = "#2C7BB6") +
   labs(title = "Distribución ordenada de los votos totales por casilla",
        x = "Casillas ordenadas",
@@ -114,7 +111,7 @@ corte_mas_reciente |>
 
 ```{r, echo=FALSE,message=FALSE}
 corte_mas_reciente |>
-  mutate(participacion = 100 * TOTAL / LISTA_NOMINAL) |>
+  mutate(participacion = 100 * PERSONAS_VOTANTES / LISTA_NOMINAL_CASILLA) |>
   arrange(participacion) |>
   mutate(orden = row_number()) |>
   ggplot(aes(x = orden, y = participacion)) +
@@ -128,9 +125,9 @@ corte_mas_reciente |>
 ```{r, echo=FALSE, include = FALSE, message = FALSE}
 revisar_anomalias <- function(datos, umbral_participacion = 50) {
   datos <- datos |> 
-    mutate(ln = ifelse(TIPO_CASILLA == "S" & LISTA_NOMINAL == 0, 
-                       1000, LISTA_NOMINAL)) |>
-    mutate(participacion = 100 * TOTAL / ln)
+    mutate(ln = ifelse(TIPO_CASILLA == "S" & LISTA_NOMINAL_CASILLA == 0, 
+                       1000, LISTA_NOMINAL_CASILLA)) |>
+    mutate(participacion = 100 * PERSONAS_VOTANTES / ln)
   
   anomalias <- datos |>
     filter(participacion > umbral_participacion) |>
@@ -147,7 +144,7 @@ revisar_anomalias <- function(datos, umbral_participacion = 50) {
 ```
 
 ```{r, echo=FALSE, include = TRUE}
-anomalias_detectadas <- revisar_anomalias(corte_mas_reciente, 75)
+anomalias_detectadas <- revisar_anomalias(corte_mas_reciente, 50)
 anomalias_detectadas
 ```
 
@@ -176,14 +173,14 @@ get_df <- function(modelo, estimaciones_files){
     estimaciones_modelo
 }
 
-estimaciones_hb <- get_df("ortiz", estimaciones_files)
-estimaciones_razon <- get_df("romero", estimaciones_files)
+estimaciones_hb <- get_df("hb", estimaciones_files)
+estimaciones_razon <- get_df("razon", estimaciones_files)
 estimaciones_compulsado <- get_df("compulsado", estimaciones_files)
 
 estimaciones_tbl <- rbind(estimaciones_hb, estimaciones_razon, estimaciones_compulsado)
 ```
 
-```{r , echo=FALSE, fig.width = 8, include = TRUE}
+```{r , echo=FALSE, fig.width = 8, include = TRUE, warning = FALSE}
 ggplot(estimaciones_tbl, aes(x = fecha, y = median, color = method, fill = method)) +
   geom_line(linewidth = 1) +
   geom_ribbon(aes(ymin = inf, ymax = sup), alpha = 0.2, color = NA) +
@@ -205,7 +202,13 @@ ggplot(estimaciones_tbl, aes(x = fecha, y = median, color = method, fill = metho
 ¿Qué estados aún no tienen datos?
 
 ```{r, echo=FALSE,message=FALSE}
-tab_estados_df_dje <- read_csv("../data-raw/tab_estado_df_dje.csv")
+tab_estados_df_dje <- marco_2025 |>
+  select(ID_ESTADO, ID_DISTRITO_FEDERAL, DISTRITO_JUDICIAL_ELECTORAL, CIRCUITO_JUDICIAL) |>
+  distinct() |>
+  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL)
+```
+
+```{r, echo=FALSE,message=FALSE}
 tab_estados_df_dje |>
   anti_join(corte_mas_reciente |> distinct(ID_ESTADO), by = "ID_ESTADO") |>
   distinct(ID_ESTADO) |>
@@ -227,11 +230,13 @@ tab_estados_df_dje |>
 
 ```{r, echo=FALSE,message=FALSE}
 tab_estados_df_dje |>
-  anti_join(corte_mas_reciente |> distinct(ID_ESTADO, ID_DISTRITO_FEDERAL),
-            by = c("ID_ESTADO", "ID_DISTRITO_FEDERAL")) |>
-  distinct(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
-  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
-  kable()
+  anti_join(corte_mas_reciente |> distinct(ID_ESTADO, ID_DISTRITO_FEDERAL,
+                                           CIRCUITO_JUDICIAL,
+                                           DISTRITO_JUDICIAL_ELECTORAL),
+            by = c("ID_ESTADO", "ID_DISTRITO_FEDERAL", 
+                   "CIRCUITO_JUDICIAL", "DISTRITO_JUDICIAL_ELECTORAL")) |>
+  distinct(ID_ESTADO, ID_DISTRITO_FEDERAL, CIRCUITO_JUDICIAL,
+           DISTRITO_JUDICIAL_ELECTORAL) |>  kable()
 ```
 
 
