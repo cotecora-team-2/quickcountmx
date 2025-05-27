@@ -1,7 +1,7 @@
 library(tidyverse)
-ruta <- "~/Documents/pruebas-script/"
-ruta_salida <- "~/Documents/pruebas-script/"
-remesa <- "2800001900"
+ruta <- "/Volumes/estimaciones/"
+ruta_salida <- "~/Documents/pruebas-sim1/"
+remesa <- "05271440"
 nombre_razon <- stringr::str_c(ruta, "razon", remesa, ".csv")
 nombre_hb <- stringr::str_c(ruta, "hb", remesa, ".csv")
 
@@ -20,7 +20,9 @@ compulsado_tbl <-
   filter(LMU != 1) |>
   mutate(PART = ifelse(LMU==0, pmin(part_r, part_hb), pmax(part_r, part_hb))) |>
   mutate(EQ = "compulsado") |>
-  select(EQ, EN, R, PART, LMU)
+  select(EQ, EN, R, PART, LMU) |>
+  mutate(R = str_c(EN, R)) |>
+  mutate(EN="00")
 
 ##
 nombre_salida <- str_c(ruta_salida, "compulsado", remesa, ".csv")

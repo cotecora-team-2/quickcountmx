@@ -95,15 +95,15 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA)) |>
     mutate(no_casilla = 1:n())
 
-  if(estado_str != "00"){
-    table_frame <- table_frame |>  filter(ID_ESTADO == as.numeric(estado_str))
-  }
+  #if(estado_str != "00"){
+  #  table_frame <- table_frame |>  filter(ID_ESTADO == as.numeric(estado_str))
+  #}
 
   candidatos <- readr::read_csv("data-raw/estados_candidatos_partidos_2025.csv")
 
 
-  candidatos <- candidatos  |>
-    filter(ID_ESTADO == as.numeric(estado_str))
+  #candidatos <- candidatos  |>
+  #  filter(ID_ESTADO == as.numeric(estado_str))
 
   lista_candidatos <- candidatos$CANDIDATO %>% unique()
 
@@ -176,8 +176,8 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   #  tot_casillas <- table_frame %>% nrow()
   #  n_casillas <- data_in %>% nrow()
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv")
-  n_t_muestra <- n_t_muestra %>%
-    filter(ID_ESTADO == as.numeric(estado_str))
+  n_t_muestra <- n_t_muestra #%>%
+    #filter(ID_ESTADO == as.numeric(estado_str))
 
   prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .95, 0.95, n_muestra_m/n_t_muestra$n)
 
