@@ -91,6 +91,9 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
     mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
   data_in <- data_in |> semi_join(muestra_seleccionada)
   #####################################################
+  excluir_tbl <- readr::read_csv("data-raw/casillas_excluidas.csv")
+  data_in <- data_in |> anti_join(excluir_tbl)
+
 
   print(paste0("datos: ", path_name))
   print(paste0("salidas: ", path_out))
