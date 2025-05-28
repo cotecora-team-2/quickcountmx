@@ -1,5 +1,5 @@
 write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n_estratos, tot_casillas, n_casillas,
-                          path_out){
+                          path_out, prop_obs, num_estratos){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -25,7 +25,8 @@ write_results_ratio <- function(df, file_name, team, n_muestra, #tot_estratos, n
     EN = EN,
     R = R ) %>%
     relocate(c(EQ,EN,R), .before = everything()) %>%
-    relocate(c(LMU), .after = last_col())
+    relocate(c(LMU), .after = last_col()) |>
+    mutate(muestra = n_muestra, p_muestra = round(100 * prop_obs, 2), num_estratos = num_estratos)
 
 
 #  tab_compulsados <- tab_candidatos %>%
@@ -118,9 +119,10 @@ ratio_process_batch <- function(path_name, file_name, path_out, B,
   print(ratios)
 
   n_muestra_m <- nrow(muestra_m)
+  num_estratos <- muestra_m |> group_by(estrato) |> summarise(n = n()) |> nrow()
 
   write_results_ratio(df = ratios, file_name = file_name,
                 team = team, n_muestra = n_muestra_m, #tot_estratos = tot_estratos, n_estratos = n_estratos,
                 #tot_casillas, n_casillas,
-                path_out = path_out)
+                path_out = path_out, prop_obs = n_muestra_m / 1644, num_estratos = num_estratos)
 }
