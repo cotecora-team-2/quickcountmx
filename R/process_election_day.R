@@ -1,5 +1,5 @@
 write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_casillas, n_casillas,
-                          path_out, path_mailbox, prop_obs){
+                          path_out, path_mailbox, prop_obs, n_muestra, num_estratos ){
   EN <- stringr::str_sub(file_name, 10, 11)
   R <- stringr::str_sub(file_name, 12, 17)
 
@@ -20,7 +20,8 @@ write_results <- function(fit, file_name, team, #tot_estratos, n_estratos, tot_c
     EN = EN,
     R = R ) %>%
     relocate(c(EQ,EN,R), .before = everything()) %>%
-    relocate(c(PART,LMU), .after = last_col())
+    relocate(c(PART,LMU), .after = last_col()) |>
+    mutate(muestra = n_muestra, p_muestra = round(100*prop_obs, 2) , num_estratos = num_estratos)
 
   prop_obs_str <- format(prop_obs,digits=3)
   #tab_pctpropobs <- data.frame("EN"=c(EN), "R"=c(R), "pctpropobs"=c(as.numeric(prop_obs_str)*100))
@@ -123,6 +124,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   data_in <- data_in |> semi_join(muestra_seleccionada)
   #####################################################
 
+
   logger::log_info(paste0("numero de casillas con TOTAL mayor que cero: ",data_in %>% nrow()))
   logger::log_info(paste0("datos: ", path_name))
   logger::log_info(paste0("salidas: ", path_out))
@@ -169,6 +171,9 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   #  filter(ID_ESTADO==as.numeric(estado_str)) %>%  count(estrato) %>%
   #  mutate(estrato = as.character(estrato))
   n_muestra_m <- muestra_m %>% nrow()
+  num_estratos <- muestra_m |> group_by(estrato) |> summarise(n=n()) |> nrow()
+
+  logger::log_info(paste0("numero de estratos: ", num_estratos))
   logger::log_info(paste0("numero de casillas despues de union con marco: ", n_muestra_m))
 
   #  tot_estratos <- nrow(data_stratum_tbl)
@@ -178,7 +183,7 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   n_t_muestra <- readr::read_csv("data-raw/estados_n_muestra.csv")
   n_t_muestra <- n_t_muestra #%>%
     #filter(ID_ESTADO == as.numeric(estado_str))
-
+  prop_obs_raw <- n_muestra_m/n_t_muestra$n
   prop_obs <- if_else(n_muestra_m/n_t_muestra$n >= .95, 0.95, n_muestra_m/n_t_muestra$n)
 
   inv_metric_path <- paste0("data-raw/inv_metric_",estado_str,".rds")
@@ -218,5 +223,6 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
   write_results(fit = fit, file_name = file_name,
                 team = team, #tot_estratos = tot_estratos, n_estratos = n_estratos,
                 #tot_casillas, n_casillas,
-                path_out = path_out, path_mailbox = path_mailbox, prop_obs = prop_obs)
+                path_out = path_out, path_mailbox = path_mailbox, prop_obs = prop_obs_raw,
+                num_estratos = num_estratos, n_muestra = n_muestra_m)
 }
