@@ -70,7 +70,8 @@ def main(params):
         if(descriptores["tipo"] == "REMESAS"):
           full_path = os.path.join(params.data_path, filename)
           infile = open(full_path, 'r')
-          nrow = int(infile.readline().strip())
+          ## nrow = int(infile.readline().strip())
+          nrow = sum(1 for row in infile) - 1
           infile.close()
           keep_trying = True
           invalid = False
