@@ -15,6 +15,7 @@ library(kableExtra)
 ```{r, echo=FALSE,message=FALSE}
 #path_estimaciones <- "/home/rstudio/cotecora/estimaciones/"
 path_estimaciones <- "~/Documents/pruebas-script"
+path_estimaciones <- "/Volumes/estimaciones/"
 estimaciones_files <- list.files(path_estimaciones, full.names = TRUE,
                                  recursive = TRUE, include.dirs = FALSE, 
                                  pattern = "*csv")
@@ -25,7 +26,7 @@ Analizamos datos del último corte:
 
 ```{r, echo=FALSE,message=FALSE, include = TRUE}
 #path_cortes <- "/home/rstudio/cotecora/cortes/"
-path_cortes <- "../../2025/simulacros-2025/simulacro-1"
+path_cortes <- "/Volumes/cortes/"
 
 cortes_files <- list.files(
   path_cortes, 
@@ -45,11 +46,11 @@ corte_mas_reciente <- read.table(corte_mas_reciente_file,
                                  sep = "|",
                                  stringsAsFactors = FALSE) |>
   select(c("CLAVE_CASILLA", "ID_ESTADO", 
-    "ID_DISTRITO_FEDERAL", 
     "PERSONAS_VOTANTES",
-    "FECHA_HORA")) 
-# añadir "NUMERO_ARE",
-
+    "ID_DISTRITO", 
+    "PERSONAS_VOTANTES",
+    "ARE")) |>
+  rename(ID_DISTRITO_FEDERAL = ID_DISTRITO)
 ```
 
 ```{r, echo=FALSE,message=FALSE}
@@ -61,6 +62,25 @@ corte_mas_reciente <- corte_mas_reciente |>
   left_join(marco_2025, by = c("CLAVE_CASILLA", "ID_ESTADO",
                                "ID_DISTRITO_FEDERAL")) 
 ```
+
+### ¿Qué estados aún no tienen datos?
+
+```{r, echo=FALSE,message=FALSE}
+tab_estados_df_dje <- marco_2025 |>
+  select(ID_ESTADO, NOMBRE_ESTADO, ID_DISTRITO_FEDERAL, DISTRITO_JUDICIAL_ELECTORAL, CIRCUITO_JUDICIAL) |>
+  distinct() |>
+  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL)
+```
+
+```{r, echo=FALSE,message=FALSE}
+tab_estados_df_dje |>
+  anti_join(corte_mas_reciente |> distinct(ID_ESTADO), by = "ID_ESTADO") |>
+  arrange(ID_ESTADO) |>
+  distinct(ID_ESTADO, NOMBRE_ESTADO) |>
+  kable()
+```
+
+### Muestra por estrato
 
 ```{r, echo=FALSE,message=FALSE}
 asignacion <- read_csv("../data-raw/asignacion_estratos_2025.csv") |>
@@ -74,9 +94,13 @@ tabla_muestra <- corte_mas_reciente |>
     muestra_recibida = n(),
     .groups = "drop"
   ) |>
-  left_join(asignacion, by = "estrato") |>
+  right_join(asignacion, by = "estrato") |>
+  mutate(muestra_recibida = ifelse(is.na(muestra_recibida), 0, muestra_recibida)) |>
   arrange(ID_ESTADO, estrato) |>
-  select(ID_ESTADO, estrato, muestra_esperada, muestra_recibida)
+  left_join(marco_2025 |> 
+              select(ID_ESTADO, NOMBRE_ESTADO) |> 
+              distinct(), by = "ID_ESTADO") |>
+  select(NOMBRE_ESTADO, estrato, muestra_esperada, muestra_recibida)
 
 # Primero genera la columna con colores
 colores <- tabla_muestra |> 
@@ -109,6 +133,22 @@ corte_mas_reciente |>
   theme_minimal()
 ```
 
+```{r, echo=TRUE,message=FALSE}
+lim_max <- 1000
+corte_mas_reciente |>
+  arrange(desc(PERSONAS_VOTANTES)) |>
+  filter(PERSONAS_VOTANTES > lim_max) |>
+  select(CLAVE_CASILLA, ID_ESTADO, ID_DISTRITO_FEDERAL, PERSONAS_VOTANTES, TIPO_CASILLA)
+```
+
+```{r, echo=TRUE,message=FALSE}
+lim_min <- 5
+corte_mas_reciente |>
+  arrange(desc(PERSONAS_VOTANTES)) |>
+  filter(PERSONAS_VOTANTES < lim_min) |>
+  select(CLAVE_CASILLA, ID_ESTADO, ID_DISTRITO_FEDERAL, PERSONAS_VOTANTES, TIPO_CASILLA)
+```
+
 ```{r, echo=FALSE,message=FALSE}
 corte_mas_reciente |>
   mutate(participacion = 100 * PERSONAS_VOTANTES / LISTA_NOMINAL_CASILLA) |>
@@ -123,7 +163,7 @@ corte_mas_reciente |>
 ```
 
 ```{r, echo=FALSE, include = FALSE, message = FALSE}
-revisar_anomalias <- function(datos, umbral_participacion = 50) {
+revisar_anomalias <- function(datos, umbral_participacion) {
   datos <- datos |> 
     mutate(ln = ifelse(TIPO_CASILLA == "S" & LISTA_NOMINAL_CASILLA == 0, 
                        1000, LISTA_NOMINAL_CASILLA)) |>
@@ -131,7 +171,9 @@ revisar_anomalias <- function(datos, umbral_participacion = 50) {
   
   anomalias <- datos |>
     filter(participacion > umbral_participacion) |>
-    arrange(desc(participacion))
+    arrange(desc(participacion)) |>
+    select(participacion, ln, PERSONAS_VOTANTES, CLAVE_CASILLA, 
+           ID_ESTADO, ID_DISTRITO_FEDERAL, TIPO_CASILLA)
   
   if (nrow(anomalias) > 0) {
     message("⚠️ Casillas atípicas detectadas con participación superior a ", umbral_participacion, "%:")
@@ -144,8 +186,8 @@ revisar_anomalias <- function(datos, umbral_participacion = 50) {
 ```
 
 ```{r, echo=FALSE, include = TRUE}
-anomalias_detectadas <- revisar_anomalias(corte_mas_reciente, 50)
-anomalias_detectadas
+anomalias_detectadas <- revisar_anomalias(corte_mas_reciente, 90)
+anomalias_detectadas 
 ```
 
 # Estimaciones de participación
@@ -161,7 +203,7 @@ get_df <- function(modelo, estimaciones_files){
   files_modelo <- estimaciones_files[grepl(modelo, estimaciones_files, fixed = TRUE)]
   estimaciones_modelo <- files_modelo |>
     map_df(~ read_csv(.x) |> mutate(method = modelo)) |>
-    select("PART", "LMU", method, R) |>
+    select("PART", "LMU", method, R, muestra, p_muestra, num_estratos) |>
     mutate(fecha = R) |>
     mutate_at(vars(fecha), get_fdate) |>
     group_by(method) |>
@@ -173,11 +215,57 @@ get_df <- function(modelo, estimaciones_files){
     estimaciones_modelo
 }
 
-estimaciones_hb <- get_df("hb", estimaciones_files)
-estimaciones_razon <- get_df("razon", estimaciones_files)
-estimaciones_compulsado <- get_df("compulsado", estimaciones_files)
+get_df_compulsado <- function(modelo, estimaciones_files){
+  get_fdate <- function(x){
+    x <- as.character(x)
+    nx <- as.POSIXct(
+  paste0("2025-", substr(x, 1, 2), "-", substr(x, 3, 4), " ",
+         substr(x, 5, 6), ":", substr(x, 7, 8)),
+  format = "%Y-%m-%d %H:%M"
+)
+  }
+  files_modelo <- estimaciones_files[grepl(modelo, estimaciones_files, fixed = TRUE)]
+  estimaciones_modelo <- files_modelo |>
+    map_df(~ read_csv(.x) |> mutate(method = modelo)) |>
+    select("PART", "LMU", method, R, muestra, p_muestra, num_estratos) |>
+    mutate(fecha = R) |>
+    mutate_at(vars(fecha), get_fdate) |>
+    group_by(method) |>
+      mutate(LMU = dplyr::case_when(
+      LMU == 0 ~ "inf",
+      LMU == 1 ~ "median",
+      LMU == 2 ~ "sup")) |>
+      tidyr::pivot_wider(names_from = LMU, values_from = "PART") 
+    estimaciones_modelo
+}
+
+estimaciones_hb <- get_df("hb", estimaciones_files) |> select(-R)
+estimaciones_razon <- get_df("razon", estimaciones_files) |> select(-R)
+estimaciones_compulsado <- get_df_compulsado("compulsado", estimaciones_files) |> select(-R)
 
 estimaciones_tbl <- rbind(estimaciones_hb, estimaciones_razon, estimaciones_compulsado)
+```
+```{r , echo=FALSE, fig.width = 8, include = TRUE, warning = FALSE}
+ggplot(estimaciones_tbl, aes(x = fecha, y = p_muestra)) +
+  geom_line(color = "#2171b5", linewidth = 1) +
+  geom_point(color = "#2171b5", alpha = 0.6, size = 2) +
+  scale_x_datetime(
+    breaks = estimaciones_tbl$fecha,  
+    date_labels = "%b %d\n%H:%M"
+  ) +
+  labs(
+    title = "Evolución de p_muestra a lo largo del tiempo",
+    x = "Fecha y hora",
+    y = "p_muestra"
+  ) +
+  theme_minimal(base_family = "Helvetica") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
 ```
 
 ```{r , echo=FALSE, fig.width = 8, include = TRUE, warning = FALSE}
@@ -199,45 +287,25 @@ ggplot(estimaciones_tbl, aes(x = fecha, y = median, color = method, fill = metho
   )
 ```
 
-¿Qué estados aún no tienen datos?
-
-```{r, echo=FALSE,message=FALSE}
-tab_estados_df_dje <- marco_2025 |>
-  select(ID_ESTADO, ID_DISTRITO_FEDERAL, DISTRITO_JUDICIAL_ELECTORAL, CIRCUITO_JUDICIAL) |>
-  distinct() |>
-  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL)
+```{r , echo=FALSE, fig.width = 8, include = TRUE, warning = FALSE}
+ggplot(estimaciones_tbl, aes(x = p_muestra, y = median, color = method, fill = method)) +
+  geom_line(linewidth = 1) +
+  geom_ribbon(aes(ymin = inf, ymax = sup), alpha = 0.2, color = NA) +
+  facet_wrap(~ method) +
+  labs(
+    x = "Porcentaje muestra recibida",
+    y = "Porcentaje part",
+    color = "Método",
+    fill = "Método"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    strip.background = element_rect(fill = "gray90"),
+    panel.grid.minor = element_blank()
+  )
 ```
 
-```{r, echo=FALSE,message=FALSE}
-tab_estados_df_dje |>
-  anti_join(corte_mas_reciente |> distinct(ID_ESTADO), by = "ID_ESTADO") |>
-  distinct(ID_ESTADO) |>
-  arrange(ID_ESTADO) |>
-  kable()
-```
-
-¿Qué DF aún no tienen datos?
-
-```{r, echo=FALSE,message=FALSE}
-tab_estados_df_dje |>
-  anti_join(corte_mas_reciente |> distinct(ID_ESTADO, ID_DISTRITO_FEDERAL),
-            by = c("ID_ESTADO", "ID_DISTRITO_FEDERAL")) |>
-  distinct(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
-  arrange(ID_ESTADO, ID_DISTRITO_FEDERAL) |>
-  kable()
-```
-¿Qué DJE aún no tienen datos?
-
-```{r, echo=FALSE,message=FALSE}
-tab_estados_df_dje |>
-  anti_join(corte_mas_reciente |> distinct(ID_ESTADO, ID_DISTRITO_FEDERAL,
-                                           CIRCUITO_JUDICIAL,
-                                           DISTRITO_JUDICIAL_ELECTORAL),
-            by = c("ID_ESTADO", "ID_DISTRITO_FEDERAL", 
-                   "CIRCUITO_JUDICIAL", "DISTRITO_JUDICIAL_ELECTORAL")) |>
-  distinct(ID_ESTADO, ID_DISTRITO_FEDERAL, CIRCUITO_JUDICIAL,
-           DISTRITO_JUDICIAL_ELECTORAL) |>  kable()
-```
 
 
 
