@@ -119,9 +119,9 @@ process_batch <- function(path_name, file_name, log_file, path_out, path_mailbox
     #                              stringr::str_pad(EXT_CONTIGUA,2, pad = "0")))
 
   ######## Leer y filtrar muestra ###########################
-  muestra_seleccionada <- readr::read_rds("data-raw/muestra_2025.rds") |>
-    mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
-  data_in <- data_in |> semi_join(muestra_seleccionada)
+  #muestra_seleccionada <- readr::read_rds("data-raw/muestra_2025.rds") |>
+  #  mutate(CLAVE_CASILLA = gsub("'","",CLAVE_CASILLA))
+  #data_in <- data_in |> semi_join(muestra_seleccionada)
   #####################################################
   excluir_tbl <- readr::read_csv("data-raw/casillas_excluidas.csv")
   data_in <- data_in |> anti_join(excluir_tbl)
