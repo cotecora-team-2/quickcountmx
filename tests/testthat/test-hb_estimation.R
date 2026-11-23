@@ -75,6 +75,7 @@ test_that("test call inv metric", {
   expect_equal(nrow(estimates), 4)
   expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
+
 test_that("test call mlogit-corr-opt", {
   sample_tbl <-
     select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
@@ -193,4 +194,62 @@ test_that("mlogit-corr-opt matches mlogit-corr gradients and handles unsampled s
   expect_equal(nrow(fit_empty$estimates), 4)
   expect_true(all(is.finite(fit_empty$estimates$median)))
   expect_equal(length(fit_empty$inv_metric), length(inv_metric_test))
+})
+
+test_that("hb_estimation_parallel splits regions cleanly and aggregates total_out", {
+  frame_z <- test_tbl |>
+    dplyr::mutate(
+      zone = ifelse(state %in% c("A", "B"), "Z2", "Z1"),
+      ln_nom = ln
+    )
+  sample_z <- select_sample_prop(frame_z, stratum = state, frac = 0.5, seed = 913)
+
+  fit_par <- hb_estimation_parallel(
+    sample_z,
+    sampling_frame = frame_z,
+    split_var = zone,
+    nominal_list_var = ln_nom,
+    num_cores = 1,
+    frac = 0.5,
+    stratum = state,
+    id_station = id_station,
+    parties = cand_1:otro,
+    covariates = x1:x_2,
+    model = "mlogit-corr",
+    num_iter = 100,
+    num_warmup = 100,
+    chains = 1,
+    seed = 13
+  )
+
+  expect_s3_class(fit_par$estimates, "tbl_df")
+  expect_equal(nrow(fit_par$estimates), 4)
+  expect_equal(fit_par$estimates$party, c("part", "cand_1", "cand_2", "otro"))
+  expect_equal(names(fit_par$inv_metric), c("Z1", "Z2"))
+  expect_equal(nrow(fit_par$estimates_slice), 8)
+  expect_lt(mean(abs(fit_par$estimates$median - c(16/50, 5/16, 10/16, 1/16))), 0.10)
+
+  fit_par_opt <- hb_estimation_parallel(
+    sample_z,
+    sampling_frame = frame_z,
+    split_var = zone,
+    nominal_list_var = ln_nom,
+    num_cores = 1,
+    stratum = state,
+    id_station = id_station,
+    parties = cand_1:otro,
+    covariates = x1:x_2,
+    model = "mlogit-corr-opt",
+    prop_obs = 0.9,
+    num_iter = 100,
+    num_warmup = 100,
+    chains = 1,
+    seed = 14
+  )
+  expect_s3_class(fit_par_opt$estimates, "tbl_df")
+  expect_equal(nrow(fit_par_opt$estimates), 4)
+  expect_equal(fit_par_opt$estimates$party, c("part", "cand_1", "cand_2", "otro"))
+  expect_equal(names(fit_par_opt$inv_metric), c("Z1", "Z2"))
+  expect_true(all(is.finite(fit_par_opt$estimates$median)))
+  expect_lt(mean(abs(fit_par_opt$estimates$median - c(16/50, 5/16, 10/16, 1/16))), 0.10)
 })
