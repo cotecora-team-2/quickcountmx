@@ -20,7 +20,7 @@ hb_estimation(
   max_treedepth = 10,
   chains = 3,
   sig_figs = 6,
-  model = "mlogit-corr",
+  model = c("mlogit-corr", "mlogit-corr-opt", "mlogit", "logit"),
   nominal_max = 1000,
   threads_per_chain = 1,
   inv_metric = NULL,
@@ -64,7 +64,7 @@ generator (optional).}
 
 \item{sig_figs}{Number of significant figures for Stan output}
 
-\item{model}{One of "mlogit" (the default) or "logit"}
+\item{model}{One of "mlogit-corr" (the default), "mlogit-corr-opt", "mlogit", or "logit"}
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
 stations without fixed nominal list.}
@@ -89,4 +89,15 @@ and each party's votes are simulated for every polling station (logit model)
 or with a softmax link for the default (mlogit model). There is one
 independent model for each party, and proportions are calculated from posterior simulations
 of total votes.
+
+When \code{model = "mlogit-corr-opt"}, the Stan model is mathematically
+equivalent to \code{"mlogit-corr"} (with identical unconstrained parameter
+ordering and interchangeable \code{inv_metric}), compiled with
+\code{stanc_options = list("O1")}. To reduce output overhead, it saves raw
+parameters and the generated quantities (\code{prop_votos},
+\code{participacion}, \code{y_out}) and omits intermediate transformed
+parameters (\code{alpha_bn}, \code{beta}, \code{beta_part_prop},
+\code{kappa}) from the CmdStan draws when \code{return_fit = TRUE}. In
+deployed environments, precompile the model ahead of time with
+\code{cmdstanr::cmdstan_model(system.file("stan", "model_parties_mlogit_corr_opt.stan", package = "quickcountmx"), cpp_options = list(stan_threads = TRUE), stanc_options = list("O1"))}.
 }
