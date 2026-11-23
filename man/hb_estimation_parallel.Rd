@@ -51,5 +51,6 @@ Posterior simulations of parameters are computed using stan,
 and each party's votes are simulated for every polling station (logit model)
 or with a softmax link for the default (mlogit model). There is one
 independent model for each party, and proportions are calculated from posterior simulations
-of total votes. Splits are modelled independently
+of total votes. Splits are modelled independently. The selected Stan model is
+compiled once before parallel workers are spawned.
 }

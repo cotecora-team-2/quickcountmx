@@ -92,3 +92,62 @@ test_that("test call mlogit-corr-opt", {
   expect_equal(length(fit_opt$inv_metric), length(inv_metric_test))
   expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
+
+test_that("hb_estimation rejects unknown model", {
+  sample_tbl <-
+    select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
+  expect_error(
+    hb_estimation(sample_tbl, stratum = state,
+                  id_station = id_station,
+                  sampling_frame = test_tbl,
+                  prop_obs = 0.9, seed = 12,
+                  model = "mlogit-corr-optt",
+                  parties = cand_1:otro, covariates = x1:x_2,
+                  num_iter = 10, chains = 1),
+    "should be one of"
+  )
+})
+
+test_that("mlogit-corr-opt matches mlogit-corr gradients and handles unsampled strata", {
+  sample_empty <-
+    select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912) |>
+    dplyr::filter(state != "D")
+
+  frame_tmp <- test_tbl |> dplyr::rename(strata = state)
+  sample_tmp <- sample_empty |> dplyr::ungroup() |> dplyr::rename(strata = state)
+  json_path <- system.file("stan", "prior_data_corr.json", package = "quickcountmx")
+  parameters <- jsonlite::read_json(json_path, simplifyVector = TRUE)
+  parameters$nominal_max <- 1000
+  data_list <- create_hb_data(sample_tmp, frame_tmp,
+                              parties = cand_1:otro,
+                              covariates = x1:x_2,
+                              nominal_max = 1000,
+                              prop_obs = 0.9)
+  stan_data <- c(parameters, data_list)
+  stan_data$parties_name <- NULL
+
+  mod_orig <- compile_hb_model("mlogit-corr")
+  mod_opt <- compile_hb_model("mlogit-corr-opt")
+
+  diag_orig <- mod_orig$diagnose(data = stan_data, seed = 123, init = 0.5)
+  diag_opt <- mod_opt$diagnose(data = stan_data, seed = 123, init = 0.5)
+  g_orig <- diag_orig$gradients()
+  g_opt <- diag_opt$gradients()
+
+  expect_equal(nrow(g_opt), nrow(g_orig))
+  expect_equal(g_opt$value, g_orig$value, tolerance = 1e-12)
+  expect_equal(g_opt$model, g_orig$model, tolerance = 1e-8)
+
+  fit_empty <- hb_estimation(sample_empty, stratum = state,
+                             id_station = id_station,
+                             sampling_frame = test_tbl,
+                             prop_obs = 0.9, seed = 12,
+                             model = "mlogit-corr-opt",
+                             parties = cand_1:otro, covariates = x1:x_2,
+                             num_iter = 100, num_warmup = 100, chains = 1,
+                             inv_metric = inv_metric_test)
+  expect_is(fit_empty$estimates, "tbl")
+  expect_equal(nrow(fit_empty$estimates), 4)
+  expect_true(all(is.finite(fit_empty$estimates$median)))
+  expect_equal(length(fit_empty$inv_metric), length(inv_metric_test))
+})

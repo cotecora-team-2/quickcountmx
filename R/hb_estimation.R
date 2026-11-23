@@ -6,6 +6,17 @@
 #' or with a softmax link for the default (mlogit model). There is one
 #' independent model for each party, and proportions are calculated from posterior simulations
 #' of total votes.
+#'
+#' When \code{model = "mlogit-corr-opt"}, the Stan model is mathematically
+#' equivalent to \code{"mlogit-corr"} (with identical unconstrained parameter
+#' ordering and interchangeable \code{inv_metric}), compiled with
+#' \code{stanc_options = list("O1")}. To reduce output overhead, it saves raw
+#' parameters and the generated quantities (\code{prop_votos},
+#' \code{participacion}, \code{y_out}) and omits intermediate transformed
+#' parameters (\code{alpha_bn}, \code{beta}, \code{beta_part_prop},
+#' \code{kappa}) from the CmdStan draws when \code{return_fit = TRUE}. In
+#' deployed environments, precompile the model ahead of time with
+#' \code{cmdstanr::cmdstan_model(system.file("stan", "model_parties_mlogit_corr_opt.stan", package = "quickcountmx"), cpp_options = list(stan_threads = TRUE), stanc_options = list("O1"))}.
 #' @param data_tbl \code{tibble} of sample data.
 #' @param stratum Unquoted variable indicating the stratum for each polling
 #'   station.
@@ -27,7 +38,7 @@
 #' @param max_treedepth The maximum allowed tree depth for the NUTS engine (default 10)
 #' @param chains Number of chains (will be run in parallel)
 #' @param sig_figs Number of significant figures for Stan output
-#' @param model One of "mlogit-corr" (the default), "mlogit-corr-opt", "mlogit", or "part-judicial"
+#' @param model One of "mlogit-corr" (the default), "mlogit-corr-opt", "mlogit", or "logit"
 #' @param nominal_max Maximum number of nominal count for stations. Used for
 #' stations without fixed nominal list.
 #' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
@@ -44,9 +55,12 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
                           prop_obs = 0.995, seed = NULL, return_fit = FALSE,
                           num_iter = 200, num_warmup = 200, adapt_delta = 0.80,
                           max_treedepth = 10, chains = 3, sig_figs = 6,
-                          model = "mlogit-corr", nominal_max = 1000,
+                          model = c("mlogit-corr", "mlogit-corr-opt", "mlogit", "logit"),
+                          nominal_max = 1000,
                           threads_per_chain = 1, inv_metric = NULL,
                           erase_output_files = TRUE){
+
+  model <- match.arg(model)
 
   sampling_frame <- sampling_frame %>%
     rename(strata = {{ stratum }}) %>%
@@ -74,29 +88,14 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   parties_name <- stan_data$parties_name
   stan_data$parties_name <- NULL
   # Compile model
-  stanc_options <- list()
-  if(model == "mlogit"){
-    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
-  } else if(model == "mlogit-corr-opt"){
-    path <- system.file("stan", "model_parties_mlogit_corr_opt.stan", package = "quickcountmx")
-    stanc_options <- list("O1")
-  } else if(model == "logit"){
-    path <- system.file("stan", "model_logit_corr.stan", package = "quickcountmx")
-  } else {
-    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
-  }
+  stan_model <- compile_hb_model(model)
   adapt_delta <- adapt_delta
   max_treedepth <- max_treedepth
   iter_warmup <- num_warmup
 
-  model <- cmdstanr::cmdstan_model(
-    path,
-    cpp_options = list(stan_threads = TRUE),
-    stanc_options = stanc_options
-  )
   ## fit
 
-  fit <- model$sample(data = stan_data,
+  fit <- stan_model$sample(data = stan_data,
                       seed = seed,
                       init = 0.01,
                       iter_sampling = num_iter,
@@ -139,7 +138,8 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' and each party's votes are simulated for every polling station (logit model)
 #' or with a softmax link for the default (mlogit model). There is one
 #' independent model for each party, and proportions are calculated from posterior simulations
-#' of total votes. Splits are modelled independently
+#' of total votes. Splits are modelled independently. The selected Stan model is
+#' compiled once before parallel workers are spawned.
 #'
 #' @param data_tbl \code{tibble} of sample data.
 #' @param sampling_frame \code{tibble} of sampling frame with stratum variable (named exactly as in
@@ -181,6 +181,15 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
   regions <- unique(sampling_frame$region)
   sampling_frame_split <- sampling_frame |> split(sampling_frame$region)
   data_split <- data_tbl |> split(data_tbl$region)
+
+  # Precompile the selected Stan model once before forking workers
+  dots <- rlang::enquos(...)
+  model_arg <- if ("model" %in% names(dots)) {
+    rlang::eval_tidy(dots$model)
+  } else {
+    "mlogit-corr"
+  }
+  compile_hb_model(model_arg)
 
   res_list <- parallel::mclapply(1:length(regions), function(i){
 
@@ -280,4 +289,26 @@ create_hb_data <- function(data_tbl, sampling_frame, parties, nominal_max,
 
 
   return(stan_data)
+}
+
+compile_hb_model <- function(model = c("mlogit-corr", "mlogit-corr-opt",
+                                       "mlogit", "logit")) {
+  model <- match.arg(model)
+  stanc_options <- list()
+  if (model == "mlogit-corr-opt") {
+    path <- system.file("stan", "model_parties_mlogit_corr_opt.stan",
+                        package = "quickcountmx")
+    stanc_options <- list("O1")
+  } else if (model == "logit") {
+    path <- system.file("stan", "model_logit_corr.stan",
+                        package = "quickcountmx")
+  } else {
+    path <- system.file("stan", "model_parties_mlogit_corr.stan",
+                        package = "quickcountmx")
+  }
+  cmdstanr::cmdstan_model(
+    path,
+    cpp_options = list(stan_threads = TRUE),
+    stanc_options = stanc_options
+  )
 }
