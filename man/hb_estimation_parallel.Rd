@@ -12,7 +12,8 @@ hb_estimation_parallel(
   num_cores = 5,
   inv_metric_list = NULL,
   nominal_max = 1000,
-  sig_figs = 7,
+  frac = NULL,
+  sig_figs = 8,
   ...
 )
 }
@@ -32,6 +33,10 @@ hb_estimation_parallel(
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
 stations without fixed nominal list.}
+
+\item{frac}{Optional sampling fraction for full sample size. When provided,
+each split computes its own \code{prop_obs} as
+\code{min((nrow(data_slice) / nrow(frame_slice)) / frac, 0.95)}.}
 
 \item{sig_figs}{Number of significant figures for Stan output}
 

@@ -150,8 +150,10 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 #' @param inv_metric_list List of inv_metric diagonals guesses for each split
 #' @param nominal_max Maximum number of nominal count for stations. Used for
 #' stations without fixed nominal list.
+#' @param frac Optional sampling fraction for full sample size. When provided,
+#'   each split computes its own \code{prop_obs} as
+#'   \code{min((nrow(data_slice) / nrow(frame_slice)) / frac, 0.95)}.
 #' @param sig_figs Number of significant figures for Stan output
-#' @param nominal_list_var Unquoted name of variable with nominal list of voters
 #' @param ... Other parameters passed to hb_estimation.
 #' @return A list with model fit (if return_fit=TRUE), a \code{tibble}
 #' estimates including point estimates for each party (median)
@@ -162,7 +164,7 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
 hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
                                    nominal_list_var = NULL, num_cores = 5,
                                    inv_metric_list = NULL, nominal_max = 1000,
-                                   sig_figs = 7, ...){
+                                   frac = NULL, sig_figs = 8, ...){
 
   sampling_frame <- sampling_frame %>%
     ungroup() %>%
@@ -177,10 +179,11 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     ungroup() %>%
     rename(region = {{ split_var }})
 
-  #total_nominal <- sampling_frame_tbl |> summarise(total_nominal = sum(LISTA_NOMINAL_CASILLA))
-  regions <- unique(sampling_frame$region)
-  sampling_frame_split <- sampling_frame |> split(sampling_frame$region)
-  data_split <- data_tbl |> split(data_tbl$region)
+  regions <- unique(sampling_frame$region) |> sort()
+  sampling_frame$region_f <- factor(sampling_frame$region, levels = regions)
+  sampling_frame_split <- sampling_frame |> split(sampling_frame$region_f)
+  data_tbl$region_f <- factor(data_tbl$region, levels = regions)
+  data_split <- data_tbl |> split(data_tbl$region_f)
 
   # Precompile the selected Stan model once before forking workers
   dots <- rlang::enquos(...)
@@ -191,7 +194,7 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
   }
   compile_hb_model(model_arg)
 
-  res_list <- parallel::mclapply(1:length(regions), function(i){
+  res_list <- parallel::mclapply(seq_along(regions), function(i){
 
     sampling_frame_slice <- sampling_frame_split[[i]]
     data_slice_tbl <- data_split[[i]]
@@ -201,30 +204,47 @@ hb_estimation_parallel <- function(data_tbl, sampling_frame, split_var = NULL,
     } else {
       inv_metric_slice <- NULL
     }
-    fit_slice <- hb_estimation(sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
-                         inv_metric = inv_metric_slice, erase_output_files = FALSE,
-                         return_fit = TRUE, nominal_max = nominal_max, sig_figs = sig_figs, ...)
+    if (!is.null(frac)) {
+      prop_obs_slice <- (nrow(data_slice_tbl) / nrow(sampling_frame_slice)) / frac
+      prop_obs_slice <- min(prop_obs_slice, 0.95)
+      fit_slice <- hb_estimation(
+        sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
+        inv_metric = inv_metric_slice, erase_output_files = FALSE,
+        return_fit = TRUE, nominal_max = nominal_max, sig_figs = sig_figs,
+        prop_obs = prop_obs_slice, ...
+      )
+    } else {
+      fit_slice <- hb_estimation(
+        sampling_frame = sampling_frame_slice, data_tbl = data_slice_tbl,
+        inv_metric = inv_metric_slice, erase_output_files = FALSE,
+        return_fit = TRUE, nominal_max = nominal_max, sig_figs = sig_figs, ...
+      )
+    }
     parties_names <- fit_slice$estimates$party
-   y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
-     as_tibble() |>
-     mutate(region = region_name)
-   estimates_slice <- fit_slice$estimates |> mutate(region = region_name)
-   res_slice <- list(fit = fit_slice, y_out = y_out_tbl, parties_names = parties_names,
-        estimates_slice = estimates_slice, region_name = region_name)
-   file.remove(fit_slice$fit$output_files())
-   res_slice
+    y_out_tbl <- fit_slice$fit$draws(c("y_out"), format = "df") |>
+      as_tibble() |>
+      mutate(region = region_name)
+    total_out_tbl <- fit_slice$fit$draws(c("total_out"), format = "df") |>
+      as_tibble() |>
+      mutate(region = region_name)
+    estimates_slice <- fit_slice$estimates |> mutate(region = region_name)
+    res_slice <- list(fit = fit_slice, y_out = y_out_tbl, total_out = total_out_tbl,
+                      parties_names = parties_names,
+                      estimates_slice = estimates_slice, region_name = region_name)
+    file.remove(fit_slice$fit$output_files())
+    res_slice
   }, mc.cores = num_cores)
   y_out_tbl <- bind_rows(res_list |> purrr::map( ~.x$y_out)) |>
     group_by(.draw) |>
     summarise(across(contains("y_out"), ~ sum(.x, na.rm = TRUE))) |>
-    pivot_longer(cols = contains("y_out"), names_to = "party", values_to = "votes") |>
+    tidyr::pivot_longer(cols = contains("y_out"), names_to = "party", values_to = "votes") |>
     group_by(.draw) |>
     mutate(total_votes = sum(votes)) |>
     mutate(prop_votes = votes / total_votes) |>
     ungroup()
-  part_tbl <- y_out_tbl |>
+  part_tbl <- bind_rows(res_list |> purrr::map( ~.x$total_out)) |>
     group_by(.draw) |>
-    summarise(total_votes = first(total_votes)) |>
+    summarise(total_votes = sum(total_out)) |>
     mutate(prop_votes = total_votes / total_nominal) |>
     mutate(party = "part")
   estimates_tbl <- y_out_tbl |> bind_rows(part_tbl) |>
