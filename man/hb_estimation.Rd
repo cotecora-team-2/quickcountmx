@@ -64,7 +64,7 @@ generator (optional).}
 
 \item{sig_figs}{Number of significant figures for Stan output}
 
-\item{model}{One of "mlogit" (the default) or "logit"}
+\item{model}{One of "mlogit-corr" (the default), "mlogit-corr-opt", "mlogit", or "part-judicial"}
 
 \item{nominal_max}{Maximum number of nominal count for stations. Used for
 stations without fixed nominal list.}

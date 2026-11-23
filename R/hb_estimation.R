@@ -27,7 +27,7 @@
 #' @param max_treedepth The maximum allowed tree depth for the NUTS engine (default 10)
 #' @param chains Number of chains (will be run in parallel)
 #' @param sig_figs Number of significant figures for Stan output
-#' @param model One of "mlogit" (the default) or "logit"
+#' @param model One of "mlogit-corr" (the default), "mlogit-corr-opt", "mlogit", or "part-judicial"
 #' @param nominal_max Maximum number of nominal count for stations. Used for
 #' stations without fixed nominal list.
 #' @param inv_metric vector of inverse metric diagonal for the model. Default is NULL
@@ -74,27 +74,26 @@ hb_estimation <- function(data_tbl, stratum, id_station, sampling_frame, parties
   parties_name <- stan_data$parties_name
   stan_data$parties_name <- NULL
   # Compile model
+  stanc_options <- list()
   if(model == "mlogit"){
     path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
-    adapt_delta <- adapt_delta
-    max_treedepth <- max_treedepth
-    iter_warmup <- num_warmup
+  } else if(model == "mlogit-corr-opt"){
+    path <- system.file("stan", "model_parties_mlogit_corr_opt.stan", package = "quickcountmx")
+    stanc_options <- list("O1")
+  } else if(model == "logit"){
+    path <- system.file("stan", "model_logit_corr.stan", package = "quickcountmx")
   } else {
-    if(model == "logit"){
-      path <- system.file("stan", "model_logit_corr.stan", package = "quickcountmx")
-      adapt_delta <- adapt_delta
-      max_treedepth <- max_treedepth
-      iter_warmup <- num_warmup
-    }
-    else {
-      path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
-      adapt_delta <- adapt_delta
-      max_treedepth <- max_treedepth
-      iter_warmup <- num_warmup
-    }
+    path <- system.file("stan", "model_parties_mlogit_corr.stan", package = "quickcountmx")
   }
+  adapt_delta <- adapt_delta
+  max_treedepth <- max_treedepth
+  iter_warmup <- num_warmup
 
-  model <- cmdstanr::cmdstan_model(path, cpp_options = list(stan_threads = TRUE))
+  model <- cmdstanr::cmdstan_model(
+    path,
+    cpp_options = list(stan_threads = TRUE),
+    stanc_options = stanc_options
+  )
   ## fit
 
   fit <- model$sample(data = stan_data,

@@ -75,3 +75,20 @@ test_that("test call inv metric", {
   expect_equal(nrow(estimates), 4)
   expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
 })
+test_that("test call mlogit-corr-opt", {
+  sample_tbl <-
+    select_sample_prop(test_tbl, stratum = state, frac = 0.3, seed = 912)
+  fit_opt <- hb_estimation(sample_tbl, stratum = state,
+                           id_station = id_station,
+                           sampling_frame = test_tbl,
+                           prop_obs = 0.9, seed = 12,
+                           model = "mlogit-corr-opt",
+                           parties = cand_1:otro, covariates = x1:x_2,
+                           num_iter = 200, chains = 1,
+                           inv_metric = inv_metric_test)
+  estimates <- fit_opt$estimates
+  expect_is(estimates, "tbl")
+  expect_equal(nrow(estimates), 4)
+  expect_equal(length(fit_opt$inv_metric), length(inv_metric_test))
+  expect_lt(mean(abs(estimates$median - c(5/16, 10/16, 1/16, 16/50))), 0.05)
+})
