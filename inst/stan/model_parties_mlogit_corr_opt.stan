@@ -228,13 +228,21 @@ model {
       rep_matrix(kappa_0, n_strata_f) + diag_post_multiply(kappa_st_raw, sigma_kappa);
     matrix[n_strata_f, p] inv_kappa = exp(-log_kappa);
 
-    // Vectorized matrix-algebra softmax + phi = alpha / kappa
-    matrix[N, p - 1] exp_free = exp(pred_all[, 1:(p - 1)]);
-    vector[N] sum_exp = 1.0 + exp_free * ones_pm1;
+    // Numerically stabilized SoA-preserving vectorized softmax + phi = alpha / kappa
+    // Uses max(a, b) = a + 0.5 * ((b - a) + abs(b - a)) and outer product row_max * ones_pm1'
+    // so stanc --O1 keeps B_all, pred_all, row_max, exp_free, and phi_mat in SoA layout.
+    vector[N] row_max = rep_vector(0.0, N);
+    for (k in 1:(p - 1)) {
+      vector[N] diff = pred_all[, k] - row_max;
+      row_max = row_max + 0.5 * (diff + abs(diff));
+    }
+    matrix[N, p - 1] exp_free = exp(pred_all[, 1:(p - 1)] - row_max * ones_pm1');
+    vector[N] exp_ref = exp(-row_max);
+    vector[N] sum_exp = exp_ref + exp_free * ones_pm1;
     vector[N] scale = (n_ord .* inv_logit(pred_all[, p])) ./ sum_exp;
     matrix[N, p] phi_mat;
     phi_mat[, 1:(p - 1)] = diag_pre_multiply(scale, exp_free);
-    phi_mat[, p] = scale;
+    phi_mat[, p] = scale .* exp_ref;
     phi_mat = phi_mat .* inv_kappa[stratum_ord, ];
 
     // Exact neg_binomial_2(y | alpha, alpha / kappa) log-likelihood up to data constant

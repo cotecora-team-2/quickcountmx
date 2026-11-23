@@ -138,6 +138,49 @@ test_that("mlogit-corr-opt matches mlogit-corr gradients and handles unsampled s
   expect_equal(g_opt$value, g_orig$value, tolerance = 1e-12)
   expect_equal(g_opt$model, g_orig$model, tolerance = 1e-8)
 
+  # Extreme-predictor stability check: (710, 709, 0) would overflow unshifted exp()
+  stan_data_ext <- stan_data
+  stan_data_ext$y[, stan_data$p] <- 0L
+  stan_data_ext$y_f[, stan_data$p] <- 0L
+  C <- stan_data$n_covariates_f + 1L
+  S <- stan_data$n_strata_f
+  p <- stan_data$p
+  beta_0_opt <- matrix(0, nrow = C, ncol = p - 1L)
+  beta_0_opt[1, 1] <- 710
+  beta_0_opt[1, 2] <- 709
+  omega_id <- aperm(array(rep(diag(C), p - 1L), dim = c(C, C, p - 1L)), c(3, 1, 2))
+  init_opt <- list(list(
+    beta_0 = beta_0_opt,
+    sigma = matrix(1, nrow = C, ncol = p - 1L),
+    beta_raw = matrix(0, nrow = C, ncol = S * (p - 1L)),
+    Omega = omega_id,
+    beta_0_part_prop = rep(0, C),
+    sigma_part_prop = rep(1, C),
+    beta_part_prop_raw = matrix(0, nrow = C, ncol = S),
+    part_Omega_prop = diag(C),
+    kappa_0 = rep(2, p),
+    sigma_kappa = rep(0.5, p),
+    kappa_st_raw = matrix(0, nrow = S, ncol = p)
+  ))
+  init_orig <- list(list(
+    beta_0 = t(beta_0_opt),
+    sigma = matrix(1, nrow = p - 1L, ncol = C),
+    beta_raw = array(0, dim = c(p - 1L, C, S)),
+    Omega = omega_id,
+    beta_0_part_prop = rep(0, C),
+    sigma_part_prop = rep(1, C),
+    beta_part_prop_raw = matrix(0, nrow = C, ncol = S),
+    part_Omega_prop = diag(C),
+    kappa_0 = rep(2, p),
+    sigma_kappa = rep(0.5, p),
+    kappa_st_raw = matrix(0, nrow = S, ncol = p)
+  ))
+  g_orig_ext <- mod_orig$diagnose(data = stan_data_ext, init = init_orig, error = 1e-4)$gradients()
+  g_opt_ext <- mod_opt$diagnose(data = stan_data_ext, init = init_opt, error = 1e-4)$gradients()
+  expect_true(all(is.finite(g_opt_ext$model)))
+  expect_equal(g_opt_ext$value, g_orig_ext$value, tolerance = 1e-12)
+  expect_equal(g_opt_ext$model, g_orig_ext$model, tolerance = 1e-8)
+
   fit_empty <- hb_estimation(sample_empty, stratum = state,
                              id_station = id_station,
                              sampling_frame = test_tbl,
